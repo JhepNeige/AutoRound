@@ -127,20 +127,19 @@ async function robot(side){
 					dest.pos=circle_collision.reject({x:obstacle.x,y:obstacle.y,r:obstacle.r+wanderer.r}, dest.pos);
 					upPath();
 				}
-				var tmp;
 				/// * make obstacle immobile by substracting its speed to our speed
 				/// * project obstacle's center on current traj
 				/// * check if projection is ahead of us and not too far (between current pos and dest)
 				let vec=dif(wanderer.vec,obstacle.vec);//wanderer.vec;//
-				tmp=dot_prod(dif(obstacle,wanderer),normed(vec));
-				if (tmp>0 && tmp< norm(vec)*step /*dist(dest.pos,wanderer)*/) {
+				let proj=dot_prod(dif(obstacle,wanderer),normed(vec))/norm(vec);
+				if (proj>0 && proj< step) {
 					///check if projection is inside collision circle (sum of both radii)
-//					tmp=point_of_line([wanderer,normed(vec)],tmp);
-					tmp=add(wanderer,mult(wanderer.vec,tmp/norm(vec)));
+					let tmp=add(wanderer,mult(wanderer.vec,proj));
+					let tmp2 = add(obstacle,mult(obstacle.vec,proj));
 					detour.pos=tmp;
-					if (dist(obstacle,tmp)<obstacle.r+wanderer.r) {
+					if (dist(tmp2,tmp)<obstacle.r+wanderer.r) {
 						stack.push(dest.pos);
-						dest.pos=circle_collision.reject({x:obstacle.x,y:obstacle.y,r:obstacle.r+wanderer.r}, tmp);
+						dest.pos=circle_collision.reject({x:tmp2.x,y:tmp2.y,r:obstacle.r+wanderer.r}, tmp);
 						upPath();
 					}
 				}
