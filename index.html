@@ -157,9 +157,11 @@ function drawCircle(x,y,r,col='black',fill=false) {
 
 function draw() {
 	setTimeout(draw, 20);
-//	ctx.clearRect(0,0,cv.width,cv.height);
-	ctx.fillStyle="#ffffff11";
+	// ctx.clearRect(0,0,cv.width,cv.height);
+	// ctx.fillStyle="#ffffff11";
+	ctx.globalAlpha=0.2;ctx.fillStyle="white";
 	ctx.beginPath(); ctx.rect(0,0,cv.width,cv.height); ctx.fill();
+	ctx.globalAlpha=1.0;
 	rounds.forEach(rd =>{
 		drawCircle(rd.x,rd.y,rd.r);
 	});
@@ -167,7 +169,7 @@ function draw() {
 		// let pos=[rd.x+rounds[0].origx-rounds[0].x,rounds[0].origy+rd.y-rounds[0].y];
 		// drawCircle(pos.x,pos.y,rd.r,"LightBlue");
 	// });
-	const hues=["red","yellow","green","cyan","blue","magenta"];
+	// const hues=["red","yellow","green","cyan","blue","magenta"];
 	// points.forEach((pt,i)=> {
 		// if(!pt.pos)return;
 		// let h= hues.indexOf(pt.col);
