@@ -78,7 +78,7 @@ async function robot(){
 	}
 	dest.col="red";
 	var detour={pos:null,col:"green"};
-	// points.push(dest,detour);
+	points.push(dest,detour);
 	var tim=Date.now();
 	while(1){
 		if (wanderer.stack.length==0) {
@@ -168,14 +168,14 @@ function draw() {
 		// drawCircle(pos.x,pos.y,rd.r,"LightBlue");
 	// });
 	const hues=["red","yellow","green","cyan","blue","magenta"];
-	// points.forEach((pt,i)=> {
-		// if(!pt.pos)return;
-		// let h= hues.indexOf(pt.col);
-		// h+= flo(i/2)/(points.length/2+1);
-		// drawCircle(
-			// pt.pos.x,pt.pos.y,3, getColorFast(h).toColor(),true
-		// ); 
-	// });
+	points.forEach((pt,i)=> {
+		if(!pt.pos)return;
+		let h= hues.indexOf(pt.col);
+		h+= flo(i/2)/(points.length/2+1);
+		drawCircle(
+			pt.pos.x,pt.pos.y,3, getColorFast(h).toColor(),true
+		); 
+	});
 	// if (obj.go) obj.seg.forEach((q,i)=>{
 		// ctx.beginPath();
 		// ctx.arc(obj.x,obj.y,obj.r,q[0].t,q[1].t);
@@ -191,8 +191,7 @@ function draw() {
 
 draw();
 const NB_ROBOTS=20;
-async function recurse(){ robot().then(recurse); }
-for (let i =0; i<NB_ROBOTS;++i) recurse();
+for (let i =0; i<NB_ROBOTS;++i) robot().then(()=>{console.log("hey");});
 
 /// flash a bugged dude : rounds.forEach(x=>{ if (norm(x.vec)>0.01) drawCircle(x.x,x.y,x.r,"red",true); } );
 
