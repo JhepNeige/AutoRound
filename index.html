@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>
+Auto Round
+</title>
+<script src="geometry.js?1"></script>
+<script src="libColor.js"></script>
+</head>
+<body style="margin:0px">
+<canvas id="cv" width=600 height=500 style="border:solid 1px red; /*transform:scale(1,-1)*/"></canvas>
+<script>
+
+if (String(location).indexOf("atwebpages")>-1) document.title+=" online";
+
+/// Augments
+var flo=Math.floor, ran=Math.random, pi=Math.PI,sqrt=Math.sqrt;
+var cos=Math.cos,sin=Math.sin;
+
+function hexByte(x){return x.toString(16).padStart(2,"0") ;}
+if (!Array.prototype.toColor) Object.defineProperty(Array.prototype,"toColor",{value(){ return '#'+this.map(hexByte).join('') ; }});
+if (!Array.prototype.remove) Object.defineProperty(Array.prototype,"remove",{value(arg){ this.splice(this.indexOf(arg),1); }});
+
+/// HMI
+var cv=document.getElementById("cv");
+var ctx=cv.getContext("2d");
+var w=cv.width, h=cv.height;
+document.getElementById("cv").addEventListener("mouseup", e=>{
+	// draw();
+	// getFarDest(obstacle.x,obstacle.y);
+	shout();
+});
+function shout(msg="MOTHEATER") {
+	var el=document.createElement("div");
+	el.textContent=msg;
+	el.style="position:relative;color:black";
+	document.body.append(el);
+	setTimeout(()=>{document.body.removeChild(el);}, 3000);
+}
+
+
+/// Resources
+
+// var obstacle={r:50,x:175,y:200};
+// var wanderer={r:20,x:35,y:30};
+
+var rounds=[];
+var points=[];
+
+/// Brain
+
+const eps=1e-12;
+function getFarDest(x,y,off) {
+	var w=cv.width-off*2,h=cv.height-off*2;
+	var r=h/2+(sqrt(w**2+h**2)/2-h/2)*ran();
+	var tmp;
+	var box=[off,off,off+w,off+h];
+	var isec=circle_in_box.getIntersections(box, {x:x,y:y,r:r});
+	if (isec.length<2) {tmp=2*pi*ran(); return [x+r*cos(tmp),y+r*sin(tmp)];}
+	isec.forEach((p,i)=>{
+		isec[i].t=Math.atan2(p.y-y,p.x-x);
+	});
+	isec.sort((a,b)=>a.t-b.t);
+	tmp=[x+r*cos(isec[0].t+eps),y+r*sin(isec[0].t+eps)];
+	if (tmp.x<box[0] ||tmp.x>box[2] ||tmp.y<box[1] ||tmp.y>box[3])
+		isec.unshift(isec[isec.length-1]);
+	else isec.push(isec[0]);
+	var seg=[];
+	for (let i=0;i<isec.length-1;i+=2) seg.push([isec[i],isec[i+1]]); //TODO: make a getSeg() in library instead
+	tmp=seg[flo(seg.length*ran())];
+	if (tmp[1].t<tmp[0].t)tmp[1].t+=2*pi;
+	tmp=tmp[0].t+(tmp[1].t-tmp[0].t)*ran();
+	tmp=[x+r*cos(tmp),y+r*sin(tmp)];
+	return tmp;
+}
+
+//TODO: stuff hardcoded right and left
+var frameDur=0.010; ///second
+// var obj={};
+async function robot(side){
+	//var side=flo( 4*ran() );
+
+	var wanderer={
+		r:15+10*ran()
+		,x: (side & 1 ? h/2+(ran()-0.5)*200     : (side > 1 ? w-25 : 25 ) )
+		,y: (side & 1 ? (side > 1 ? h-25 : 25 ) : h/2+(ran()-0.5)*200 )
+		,vec:[0,0]
+	};
+	wanderer.origx=wanderer.x; wanderer.origy=wanderer.y; 
+	rounds.push(wanderer);
+	var speed,step;
+	var dest={pos:[
+		 side & 1 ? wanderer.x              : (side > 1 ? 25 : w-25 )
+		,side & 1 ? (side > 1 ? 25 : h-25 ) : wanderer.y
+	]};
+	var stack=[];
+	function getSpeed(){return 20*(1+0.5*ran()); } /// speed in pixel per second
+	function upPath(){
+		wanderer.vec=mult(normed(dif(dest.pos,wanderer)),frameDur*speed);
+		step=flo(dist(dest.pos,wanderer)/(frameDur*speed));
+	}
+	dest.col="red";
+	var detour={pos:null,col:"green"};
+	points.push(dest,detour);
+	var tim=Date.now();
+	while(1){
+		if (stack.length==0) {
+			speed=getSpeed();
+			//dest.pos=getFarDest(wanderer.x,wanderer.y,wanderer.r);
+		}else {
+			dest.pos=stack.pop();
+		}
+		upPath();
+		while (step-- > 0) {
+			var dur=frameDur*1000-(Date.now()-tim);
+// console.log(Date.now()-tim);
+			if (dur<1) {console.log(dur); dur=1; }
+			await new Promise(g=>setTimeout(g,dur));
+			tim=Date.now();
+
+			rounds.forEach(obstacle =>{
+				if (obstacle==wanderer) return;
+				///if dest is inside obstacle: move dest out
+				if ( circle_collision.isPointInside({x:obstacle.x,y:obstacle.y,r:obstacle.r+wanderer.r}, dest.pos)) {
+					dest.pos=circle_collision.reject({x:obstacle.x,y:obstacle.y,r:obstacle.r+wanderer.r}, dest.pos);
+					upPath();
+				}
+				var tmp;
+				/// * make obstacle immobile by substracting its speed to our speed
+				/// * project obstacle's center on current traj
+				/// * check if projection is ahead of us and not too far (between current pos and dest)
+				let vec=dif(wanderer.vec,obstacle.vec);//wanderer.vec;//
+				tmp=dot_prod(dif(obstacle,wanderer),normed(vec));
+				if (tmp>0 && tmp< norm(vec)*step /*dist(dest.pos,wanderer)*/) {
+					///check if projection is inside collision circle (sum of both radii)
+//					tmp=point_of_line([wanderer,normed(vec)],tmp);
+					tmp=add(wanderer,mult(wanderer.vec,tmp/norm(vec)));
+					detour.pos=tmp;
+					if (dist(obstacle,tmp)<obstacle.r+wanderer.r) {
+						stack.push(dest.pos);
+						dest.pos=circle_collision.reject({x:obstacle.x,y:obstacle.y,r:obstacle.r+wanderer.r}, tmp);
+						upPath();
+					}
+				}
+			});
+			wanderer.x+=wanderer.vec.x;
+			wanderer.y+=wanderer.vec.y;
+		}
+		if (stack.length==0) {
+			wanderer.vec=[0,0];
+			return;
+		}
+	}
+}
+
+
+
+/// Graphics
+
+function drawCircle(x,y,r,col='black',fill=false) {
+	ctx.beginPath();
+	ctx.arc(x,y,r,0,2*pi);
+	if (fill){
+		ctx.fillStyle=col;ctx.fill();
+	} else {
+		ctx.strokeStyle=col;ctx.stroke();
+	}
+}
+
+function draw() {
+	setTimeout(draw, 20);
+//	ctx.clearRect(0,0,cv.width,cv.height);
+	ctx.fillStyle="#ffffff11";
+	ctx.beginPath(); ctx.rect(0,0,cv.width,cv.height); ctx.fill();
+	rounds.forEach(rd =>{
+		drawCircle(rd.x,rd.y,rd.r);
+	});
+	rounds.forEach(rd =>{
+		let pos=[rd.x+rounds[0].origx-rounds[0].x,rounds[0].origy+rd.y-rounds[0].y];
+		drawCircle(pos.x,pos.y,rd.r,"LightBlue");
+	});
+	const hues=["red","yellow","green","cyan","blue","magenta"];
+	points.forEach((pt,i)=> {
+		if(!pt.pos)return;
+		let h= hues.indexOf(pt.col);
+		h+= flo(i/2)/(points.length/2+1);
+		drawCircle(
+			pt.pos.x,pt.pos.y,3, getColorFast(h).toColor(),true
+		); 
+	});
+	// if (obj.go) obj.seg.forEach((q,i)=>{
+		// ctx.beginPath();
+		// ctx.arc(obj.x,obj.y,obj.r,q[0].t,q[1].t);
+		// ctx.strokeStyle=getColorFast(i).toColor();ctx.stroke();
+		// drawCircle(q[0].x,q[0].y, 5,getColorFast(i).toColor(),true);
+		
+		// drawCircle(q[1].x,q[1].y, 5,getColorFast(i+0.1).toColor(),true);
+	// });
+	///Palette
+	///for (let i=0;i<6;i++) {ctx.fillStyle= getColorFast(i).toColor();ctx.beginPath(); ctx.rect(0,i*20,25,20);ctx.fill();}
+
+}
+
+draw();
+// const NB_ROBOTS=2;
+// for (let i =0; i<NB_ROBOTS;++i) robot();
+robot(0);
+robot(1);
+
+
+
+
+</script>
+
+
+</body>
+</html>
