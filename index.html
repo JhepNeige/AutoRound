@@ -10,7 +10,7 @@ Auto Round
 <script src="libColor.js"></script>
 </head>
 <body style="margin:0px">
-<canvas id="cv" width=600 height=500 style="border:solid 1px red; /*transform:scale(1,-1)*/"></canvas>
+<canvas id="cv" width=600 height=500 style="background:black;border:solid 1px red; /*transform:scale(1,-1)*/"></canvas>
 <script>
 
 if (String(location).indexOf("jhepneige.github.io")>-1) document.title+=" online";
@@ -71,7 +71,7 @@ async function robot(){
 		,side & 1 ? (side > 1 ? 25 : h-25 ) : wanderer.y
 	]};
 	wanderer.stack=[];
-	function getSpeed(){return 20*(1+0.5*ran()); } /// speed in pixel per second
+	function getSpeed(){return 80*(1+0.5*ran()); } /// speed in pixel per second
 	function upPath(){
 		wanderer.vec=mult(normed(dif(dest.pos,wanderer)),frameDur*speed);
 		step=flo(dist(dest.pos,wanderer)/(frameDur*speed));
@@ -145,7 +145,7 @@ async function robot(){
 
 /// Graphics
 
-function drawCircle(x,y,r,col='black',fill=false) {
+function drawCircle(x,y,r,col='white',fill=false) {
 	ctx.beginPath();
 	ctx.arc(x,y,r,0,2*pi);
 	if (fill){
@@ -156,12 +156,8 @@ function drawCircle(x,y,r,col='black',fill=false) {
 }
 
 function draw() {
-	setTimeout(draw, 20);
-	// ctx.clearRect(0,0,cv.width,cv.height);
-	// ctx.fillStyle="#ffffff11";
-	ctx.globalAlpha=0.2;ctx.fillStyle="white";
-	ctx.beginPath(); ctx.rect(0,0,cv.width,cv.height); ctx.fill();
-	ctx.globalAlpha=1.0;
+	ctx.clearRect(0,0,cv.width,cv.height);
+	// ctx.fillStyle="#00000022";ctx.fillRect(0,0,cv.width,cv.height);
 	rounds.forEach(rd =>{
 		drawCircle(rd.x,rd.y,rd.r);
 	});
@@ -188,7 +184,7 @@ function draw() {
 	// });
 	///Palette
 	///for (let i=0;i<6;i++) {ctx.fillStyle= getColorFast(i).toColor();ctx.beginPath(); ctx.rect(0,i*20,25,20);ctx.fill();}
-
+	requestAnimationFrame(draw);
 }
 
 draw();
