@@ -62,20 +62,22 @@ async function robot(){
 		,x: (side & 1 ? w/2+(ran()-0.5)*250     : (side > 1 ? w-25 : 25 ) )
 		,y: (side & 1 ? (side > 1 ? h-25 : 25 ) : h/2+(ran()-0.5)*200 )
 		,vec:[0,0]
+		,type:side
 	};
 	wanderer.origx=wanderer.x; wanderer.origy=wanderer.y; 
 	rounds.push(wanderer);
-	var speed,step;
 	var dest={pos:[
 		 side & 1 ? wanderer.x              : (side > 1 ? 25 : w-25 )
 		,side & 1 ? (side > 1 ? 25 : h-25 ) : wanderer.y
 	]};
-	wanderer.stack=[];
+	var speed;
+	wanderer.step=0;
 	function getSpeed(){return 80*(1+0.5*ran()); } /// speed in pixel per second
 	function upPath(){
 		wanderer.vec=mult(normed(dif(dest.pos,wanderer)),frameDur*speed);
-		step=flo(dist(dest.pos,wanderer)/(frameDur*speed));
+		wanderer.step=flo(dist(dest.pos,wanderer)/(frameDur*speed));
 	}
+	wanderer.stack=[];
 	dest.col="red";
 	var detour={pos:null,col:"green"};
 	// points.push(dest,detour);
@@ -88,7 +90,7 @@ async function robot(){
 			dest.pos=wanderer.stack.pop();
 		}
 		upPath();
-		while (step-- > 0) {
+		while (wanderer.step-- > 0) {
 			var dur=frameDur*1000-(Date.now()-tim);
 			if (dur<1) {console.log(dur); dur=1; }
 			await new Promise(g=>setTimeout(g,dur));
@@ -113,7 +115,7 @@ async function robot(){
 				let vec=dif(wanderer.vec,obstacle.vec);//wanderer.vec;//
 				if (norm(vec)< 1e-9) return;
 				let ret=dot_prod(dif(obstacle,wanderer),normed(vec))/norm(vec);
-				if (ret<0 || ret> step || ret>proj[0]) return;
+				if (ret<0 || ret> wanderer.step || ret>obstacle.step || ret>proj[0]) return;
 				proj=[ret, obstacle];
 			});
 			if (proj[1]){
@@ -156,10 +158,15 @@ function drawCircle(x,y,r,col='white',fill=false) {
 }
 
 function draw() {
-	ctx.clearRect(0,0,cv.width,cv.height);
-	// ctx.fillStyle="#00000022";ctx.fillRect(0,0,cv.width,cv.height);
+	// ctx.clearRect(0,0,cv.width,cv.height);
+	ctx.fillStyle="#00000011";ctx.fillRect(0,0,cv.width,cv.height);
 	rounds.forEach(rd =>{
 		drawCircle(rd.x,rd.y,rd.r);
+		if (rd.type==null) return;
+		ctx.font = "20px Arial";
+		ctx.textAlign    = 'center';
+		ctx.textBaseline = 'middle'; 
+		ctx.fillStyle="red";ctx.fillText(">v<^".substr(rd.type,1), rd.x, rd.y);
 	});
 	// rounds.forEach(rd =>{
 		// let pos=[rd.x+rounds[0].origx-rounds[0].x,rounds[0].origy+rd.y-rounds[0].y];
@@ -188,11 +195,13 @@ function draw() {
 }
 
 draw();
-const NB_ROBOTS=20;
-async function recurse(){ robot().then(recurse); }
+
+rounds.push({r:100, x:w/2, y:h/2, vec:[0,0]});
+
+async function recurse(arg){ robot(arg).then(()=>recurse(arg)); }
+const NB_ROBOTS=12;
 for (let i =0; i<NB_ROBOTS;++i) recurse();
 
-/// flash a bugged dude : rounds.forEach(x=>{ if (norm(x.vec)>0.01) drawCircle(x.x,x.y,x.r,"red",true); } );
 
 
 
