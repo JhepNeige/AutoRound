@@ -112,20 +112,19 @@ async function robot(){
 				if (norm(vec)< 1e-9) return;
 				let ret=dot_prod(dif(obstacle,wanderer),normed(vec))/norm(vec);
 				if (ret<0 || ret> wanderer.step || ret>obstacle.step || ret>proj[0]) return;
-				proj=[ret, obstacle];
+				///check if projection is inside collision circle (sum of both radii)
+				let tmp=add(wanderer,mult(wanderer.vec,ret));
+				let tmp2 = add(obstacle,mult(obstacle.vec,ret));
+				if (dist(tmp2,tmp)>obstacle.r+wanderer.r) return;
+				tmp=circle_collision.reject({x:tmp2.x,y:tmp2.y,r:obstacle.r+wanderer.r}, tmp);
+				proj=[ret, tmp];
 			});
 			if (proj[1]){
-				var obstacle=proj[1];
-				proj=proj[0];
-				///check if projection is inside collision circle (sum of both radii)
-				let tmp=add(wanderer,mult(wanderer.vec,proj));
-				let tmp2 = add(obstacle,mult(obstacle.vec,proj));
-				// detour.pos=tmp;
-				if (dist(tmp2,tmp)<obstacle.r+wanderer.r) {
-					wanderer.stack.push(dest.pos);
-					dest.pos=circle_collision.reject({x:tmp2.x,y:tmp2.y,r:obstacle.r+wanderer.r}, tmp);
-					upPath();
-				}
+				proj=proj[1];
+				// detour.pos=proj;
+				wanderer.stack.push(dest.pos);
+				dest.pos=proj;
+				upPath();
 			}
 
 			wanderer.x+=wanderer.vec.x;
@@ -164,14 +163,15 @@ function draw() {
 	ctx.fillStyle="#00000022";ctx.fillRect(0,0,cv.width,cv.height);
 	rounds.forEach(rd =>{
 		if (rd.type==null) {drawCircle(rd.x,rd.y,rd.r); return;}
-		drawCircle(rd.x,rd.y,rd.r,getcol(rd.stack.length).toColor());
+		drawCircle(rd.x,rd.y,rd.r);//,getcol(rd.stack.length).toColor());
 		ctx.font = "20px Arial";
 		ctx.textAlign    = 'center';
 		ctx.textBaseline = 'middle'; 
 		ctx.fillStyle="red";ctx.fillText(">v<^".substr(rd.type,1), rd.x, rd.y);
+		// rd.stack.forEach(dt=>{ drawCircle(dt.x,dt.y,2); } );
 	});
 	///Palette
-	for (let i=0;i<6;i++) {ctx.fillStyle= getColorFast(i).toColor();ctx.beginPath(); ctx.rect(0,i*20,25,20);ctx.fill();}
+	/// for (let i=0;i<6;i++) {ctx.fillStyle= getColorFast(i).toColor();ctx.beginPath(); ctx.rect(0,i*20,25,20);ctx.fill();}
 	requestAnimationFrame(draw);
 }
 
@@ -180,7 +180,7 @@ draw();
 rounds.push({r:100, x:w/2, y:h/2, vec:[0,0]});
 
 async function recurse(arg){ robot(arg).then(()=>recurse(arg)); }
-const NB_ROBOTS=1;
+const NB_ROBOTS=12;
 for (let i =0; i<NB_ROBOTS;++i) recurse();
 
 
