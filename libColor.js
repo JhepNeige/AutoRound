@@ -1,3 +1,5 @@
+if (!Array.prototype.toColor) Object.defineProperty(Array.prototype,"toColor",{value(){ return '#'+this.map(hexByte).join('') ; }});
+
 const inB=[0,1,1,2,2,0], inm=[1,0,2,1,0,2], ins=[2,2,0,0,1,1];
 function getColorFast(hue,sat=0.0,val=1.0) {/// input is a float between 0 and 6
 	var i=Math.floor(hue);

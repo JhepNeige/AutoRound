@@ -16,7 +16,6 @@ Auto Round
 if (String(location).indexOf("jhepneige.github.io")>-1) document.title+=" online";
 
 /// Augments
-if (!Array.prototype.toColor) Object.defineProperty(Array.prototype,"toColor",{value(){ return '#'+this.map(hexByte).join('') ; }});
 if (!Array.prototype.remove) Object.defineProperty(Array.prototype,"remove",{value(arg){ this.splice(this.indexOf(arg),1); }});
 var flo=Math.floor, ran=Math.random, pi=Math.PI,sqrt=Math.sqrt;
 var cos=Math.cos,sin=Math.sin;
@@ -154,17 +153,25 @@ function drawCircle(x,y,r,col='white',fill=false) {
 	}
 }
 
+function getcol(arg){
+	if (arg<1) return getColorFast(arg,1-arg);
+	arg-=1;
+	return getColorFast(arg);
+}
+
 function draw() {
 	// ctx.clearRect(0,0,cv.width,cv.height);
-	ctx.fillStyle="#00000011";ctx.fillRect(0,0,cv.width,cv.height);
+	ctx.fillStyle="#00000022";ctx.fillRect(0,0,cv.width,cv.height);
 	rounds.forEach(rd =>{
-		drawCircle(rd.x,rd.y,rd.r);
-		if (rd.type==null) return;
+		if (rd.type==null) {drawCircle(rd.x,rd.y,rd.r); return;}
+		drawCircle(rd.x,rd.y,rd.r,getcol(rd.stack.length).toColor());
 		ctx.font = "20px Arial";
 		ctx.textAlign    = 'center';
 		ctx.textBaseline = 'middle'; 
 		ctx.fillStyle="red";ctx.fillText(">v<^".substr(rd.type,1), rd.x, rd.y);
 	});
+	///Palette
+	for (let i=0;i<6;i++) {ctx.fillStyle= getColorFast(i).toColor();ctx.beginPath(); ctx.rect(0,i*20,25,20);ctx.fill();}
 	requestAnimationFrame(draw);
 }
 
@@ -173,7 +180,7 @@ draw();
 rounds.push({r:100, x:w/2, y:h/2, vec:[0,0]});
 
 async function recurse(arg){ robot(arg).then(()=>recurse(arg)); }
-const NB_ROBOTS=12;
+const NB_ROBOTS=1;
 for (let i =0; i<NB_ROBOTS;++i) recurse();
 
 
