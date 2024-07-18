@@ -50,9 +50,10 @@ var rounds=[];
 /// Brain
 
 //TODO: stuff hardcoded right and left
-var frameDur=0.010; ///second
+const frameDur=0.010; ///second
+const clearance=0.1;
 async function robot(){
-	var side=flo( 4*ran() );
+	var side=0;//flo( 4*ran() );
 
 	var wanderer={
 		r:15+10*ran()
@@ -68,12 +69,13 @@ async function robot(){
 	]};
 	var speed;
 	wanderer.step=0;
-	function getSpeed(){return 80*(1+0.5*ran()); } /// speed in pixel per second
+	function getSpeed(){return 40*(1+0.5*ran()); } /// speed in pixel per second
 	function upPath(){
 		wanderer.vec=mult(normed(dif(dest.pos,wanderer)),frameDur*speed);
 		wanderer.step=flo(dist(dest.pos,wanderer)/(frameDur*speed));
 	}
 	wanderer.stack=[];
+	wanderer.dest=dest;
 	// dest.col="red";
 	// var detour={pos:null,col:"green"};
 	// points.push(dest,detour);
@@ -97,26 +99,28 @@ async function robot(){
 				if (obstacle==wanderer) return;
 				///if round or its dest is inside obstacle: move dest out
 				if ( circle_collision.isPointInside({x:obstacle.x,y:obstacle.y,r:obstacle.r+wanderer.r}, wanderer)) {
-					let tmp=circle_collision.reject({x:obstacle.x,y:obstacle.y,r:obstacle.r+wanderer.r}, wanderer);
+					let tmp=circle_collision.reject({x:obstacle.x,y:obstacle.y,r:obstacle.r+wanderer.r+clearance}, wanderer);
 					wanderer.x=tmp.x; wanderer.y=tmp.y;
 					upPath();
 				}
 				if ( circle_collision.isPointInside({x:obstacle.x,y:obstacle.y,r:obstacle.r+wanderer.r}, dest.pos)) {
-					dest.pos=circle_collision.reject({x:obstacle.x,y:obstacle.y,r:obstacle.r+wanderer.r}, dest.pos);
+					dest.pos=circle_collision.reject({x:obstacle.x,y:obstacle.y,r:obstacle.r+wanderer.r+clearance}, dest.pos);
 					upPath();
 				}
 				/// * make obstacle immobile by substracting its speed to our speed
 				/// * project obstacle's center on current traj
 				/// * check if projection is ahead of us and not too far (between current pos and dest)
 				let vec=dif(wanderer.vec,obstacle.vec);//wanderer.vec;//
-				if (norm(vec)< 1e-9) return;
+				if (norm(vec)< 1e-9) return; //hardcoded
 				let ret=dot_prod(dif(obstacle,wanderer),normed(vec))/norm(vec);
-				if (ret<0 || ret> wanderer.step || ret>obstacle.step || ret>proj[0]) return;
+				if (ret<0 || ret> wanderer.step) return;
+				if (obstacle.step!=null && ret>obstacle.step) return; 
+				if (ret>proj[0]) return;
 				///check if projection is inside collision circle (sum of both radii)
 				let tmp=add(wanderer,mult(wanderer.vec,ret));
 				let tmp2 = add(obstacle,mult(obstacle.vec,ret));
 				if (dist(tmp2,tmp)>obstacle.r+wanderer.r) return;
-				tmp=circle_collision.reject({x:tmp2.x,y:tmp2.y,r:obstacle.r+wanderer.r}, tmp);
+				tmp=circle_collision.reject({x:tmp2.x,y:tmp2.y,r:obstacle.r+wanderer.r+clearance}, tmp);
 				proj=[ret, tmp];
 			});
 			if (proj[1]){
@@ -152,9 +156,12 @@ function drawCircle(x,y,r,col='white',fill=false) {
 	}
 }
 
+//bunch a hardcode, look away
 function getcol(arg){
-	if (arg<1) return getColorFast(arg,1-arg);
+	if (arg<1) return getColorFast(0,1-arg); /// 0=red
 	arg-=1;
+	if (arg>5) { console.log("overstack", arg+1); }
+	arg=Math.min(arg,5);
 	return getColorFast(arg);
 }
 
@@ -164,20 +171,22 @@ function draw() {
 	rounds.forEach(rd =>{
 		if (rd.type==null) {drawCircle(rd.x,rd.y,rd.r); return;}
 		drawCircle(rd.x,rd.y,rd.r,getcol(rd.stack.length).toColor());
-		ctx.font = "20px Arial";
 		ctx.textAlign    = 'center';
 		ctx.textBaseline = 'middle'; 
-		ctx.fillStyle="red";ctx.fillText(">v<^".substr(rd.type,1), rd.x, rd.y);
+		ctx.font = "20px Arial";ctx.fillStyle="red";ctx.fillText(">v<^".substr(rd.type,1), rd.x, rd.y);
+		ctx.font = "10px Arial";ctx.fillStyle="LightYellow";ctx.fillText("x", rd.dest.pos.x, rd.dest.pos.y);
 		rd.stack.forEach(dt=>{ drawCircle(dt.x,dt.y,2); } );
 	});
 	///Palette
-	/// for (let i=0;i<6;i++) {ctx.fillStyle= getColorFast(i).toColor();ctx.beginPath(); ctx.rect(0,i*20,25,20);ctx.fill();}
+	for (let i=0;i<6;i++) {ctx.fillStyle= getColorFast(i).toColor();ctx.beginPath(); ctx.rect(0,i*20,25,20);ctx.fill();}
 	requestAnimationFrame(draw);
 }
 
 draw();
 
 rounds.push({r:100, x:w/2, y:h/2, vec:[0,0]});
+// rounds.push({r:40, x:w/2, y:h/2+140, vec:[0,0]});
+
 
 async function recurse(arg){ robot(arg).then(()=>recurse(arg)); }
 const NB_ROBOTS=3;
