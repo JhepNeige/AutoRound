@@ -163,12 +163,12 @@ function draw() {
 	ctx.fillStyle="#00000022";ctx.fillRect(0,0,cv.width,cv.height);
 	rounds.forEach(rd =>{
 		if (rd.type==null) {drawCircle(rd.x,rd.y,rd.r); return;}
-		drawCircle(rd.x,rd.y,rd.r);//,getcol(rd.stack.length).toColor());
+		drawCircle(rd.x,rd.y,rd.r,getcol(rd.stack.length).toColor());
 		ctx.font = "20px Arial";
 		ctx.textAlign    = 'center';
 		ctx.textBaseline = 'middle'; 
 		ctx.fillStyle="red";ctx.fillText(">v<^".substr(rd.type,1), rd.x, rd.y);
-		// rd.stack.forEach(dt=>{ drawCircle(dt.x,dt.y,2); } );
+		rd.stack.forEach(dt=>{ drawCircle(dt.x,dt.y,2); } );
 	});
 	///Palette
 	/// for (let i=0;i<6;i++) {ctx.fillStyle= getColorFast(i).toColor();ctx.beginPath(); ctx.rect(0,i*20,25,20);ctx.fill();}
@@ -180,7 +180,7 @@ draw();
 rounds.push({r:100, x:w/2, y:h/2, vec:[0,0]});
 
 async function recurse(arg){ robot(arg).then(()=>recurse(arg)); }
-const NB_ROBOTS=12;
+const NB_ROBOTS=3;
 for (let i =0; i<NB_ROBOTS;++i) recurse();
 
 
