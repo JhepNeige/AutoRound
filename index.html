@@ -45,7 +45,7 @@ function shout(msg="MOTHEATER") {
 // var wanderer={r:20,x:35,y:30};
 
 var rounds=[];
-// var points=[];
+var points=[];
 
 /// Brain
 
@@ -77,8 +77,8 @@ async function robot(){
 	wanderer.stack=[];
 	wanderer.dest=dest;
 	// dest.col="red";
-	// var detour={pos:null,col:"green"};
-	// points.push(dest,detour);
+	var detour={pos:null,col:"green"};
+	// points.push(detour);
 	var tim=Date.now();
 	while(1){
 		if (wanderer.stack.length==0) {
@@ -94,7 +94,7 @@ async function robot(){
 			await new Promise(g=>setTimeout(g,dur));
 			tim=Date.now();
 
-			var proj=[9999,null];
+			var proj=[+Infinity,null];
 			rounds.forEach(obstacle =>{
 				if (obstacle==wanderer) return;
 				///if round or its dest is inside obstacle: move dest out
@@ -121,6 +121,7 @@ async function robot(){
 				let tmp2 = add(obstacle,mult(obstacle.vec,ret));
 				if (dist(tmp2,tmp)>obstacle.r+wanderer.r) return;
 				tmp=circle_collision.reject({x:tmp2.x,y:tmp2.y,r:obstacle.r+wanderer.r+clearance}, tmp);
+				detour.pos=tmp;
 				proj=[ret, tmp];
 			});
 			if (proj[1]){
@@ -177,6 +178,7 @@ function draw() {
 		ctx.font = "10px Arial";ctx.fillStyle="LightYellow";ctx.fillText("x", rd.dest.pos.x, rd.dest.pos.y);
 		rd.stack.forEach(dt=>{ drawCircle(dt.x,dt.y,2); } );
 	});
+	points.forEach(pt=>pt.pos &&  drawCircle(pt.pos.x, pt.pos.y, 2, pt.col));
 	///Palette
 	for (let i=0;i<6;i++) {ctx.fillStyle= getColorFast(i).toColor();ctx.beginPath(); ctx.rect(0,i*20,25,20);ctx.fill();}
 	requestAnimationFrame(draw);
@@ -185,7 +187,6 @@ function draw() {
 draw();
 
 rounds.push({r:100, x:w/2, y:h/2, vec:[0,0]});
-// rounds.push({r:40, x:w/2, y:h/2+140, vec:[0,0]});
 
 
 async function recurse(arg){ robot(arg).then(()=>recurse(arg)); }

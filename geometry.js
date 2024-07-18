@@ -50,7 +50,10 @@ function get_angle(a,b) {
 function projected(p,d){
 	return point_of_line(d, dot_prod(dif(p,d[0]),d[1]) );
 }
-
+function mirrored(p,d){
+	var tmp=projected(p,d);
+	return dif(mult(tmp,2),p);
+}
 
 
 var circle_in_box={};
@@ -101,8 +104,6 @@ circle_collision.isPointInside=function (circle,p) {
 circle_collision.reject=function (circle,p) {
 	return add(circle, mult( normed(dif(p,circle)), circle.r )) ;
 }
-
-
 
 
 
