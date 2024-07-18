@@ -164,23 +164,24 @@ function draw() {
 	rounds.forEach(rd =>{
 		if (rd.type==null) {drawCircle(rd.x,rd.y,rd.r); return;}
 		drawCircle(rd.x,rd.y,rd.r);//,getcol(rd.stack.length).toColor());
-		ctx.font = "20px Arial";
 		ctx.textAlign    = 'center';
 		ctx.textBaseline = 'middle'; 
-		ctx.fillStyle="red";ctx.fillText(">v<^".substr(rd.type,1), rd.x, rd.y);
+		ctx.font = "20px Arial";ctx.fillStyle="red";ctx.fillText(">v<^".substr(rd.type,1), rd.x, rd.y);
+		// ctx.font = "10px Arial";ctx.fillStyle="LightYellow";ctx.fillText("x", rd.dest.pos.x, rd.dest.pos.y);
 		// rd.stack.forEach(dt=>{ drawCircle(dt.x,dt.y,2); } );
 	});
 	///Palette
-	/// for (let i=0;i<6;i++) {ctx.fillStyle= getColorFast(i).toColor();ctx.beginPath(); ctx.rect(0,i*20,25,20);ctx.fill();}
+	// for (let i=0;i<6;i++) {ctx.fillStyle= getColorFast(i).toColor();ctx.beginPath(); ctx.rect(0,i*20,25,20);ctx.fill();}
 	requestAnimationFrame(draw);
 }
 
 draw();
 
-rounds.push({r:100, x:w/2, y:h/2, vec:[0,0]});
+// rounds.push({r:100, x:w/2, y:h/2, vec:[0,0]});
+
 
 async function recurse(arg){ robot(arg).then(()=>recurse(arg)); }
-const NB_ROBOTS=12;
+const NB_ROBOTS=20;
 for (let i =0; i<NB_ROBOTS;++i) recurse();
 
 
