@@ -1,8 +1,6 @@
 if (!Array.prototype.x) Object.defineProperty(Array.prototype,"x",{get(){return this[0]},set(arg){this[0]=arg;}});
 if (!Array.prototype.y) Object.defineProperty(Array.prototype,"y",{get(){return this[1]},set(arg){this[1]=arg;}});
 
-var sqrt=Math.sqrt;
-
 /*** geometry functions ***/
 
 function dif(a,b) {
@@ -106,7 +104,12 @@ circle_collision.isPointInside=function (circle,p) {
 	return (circle.x-p.x)**2+(circle.y-p.y)**2 < circle.r**2;
 }
 circle_collision.reject=function (circle,p,k=1) {
-	return add(circle, mult( normed(dif(p,circle)), k*circle.r )) ;
+	var vec=dif(p,circle);
+	if (norm(vec)<1e-9){
+		var tmp=(Math.random()-0.5)*2e-5*Math.PI;
+		vec=[Math.cos(tmp),Math.sin(tmp)];
+	} //hardcoded
+	return add(circle, mult(normed(vec), k*circle.r )) ;
 }
 
 
