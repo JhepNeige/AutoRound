@@ -26,8 +26,6 @@ var cv=document.getElementById("cv");
 var ctx=cv.getContext("2d");
 var w=cv.width, h=cv.height;
 document.getElementById("cv").addEventListener("mouseup", e=>{
-	// draw();
-	// getFarDest(obstacle.x,obstacle.y);
 	shout();
 });
 function shout(msg="MOTHEATER") {
@@ -76,14 +74,13 @@ async function robot(){
 		wanderer.vec=mult(normed(dif(dest.pos,wanderer)),frameDur*speed);
 		wanderer.step=flo(dist(dest.pos,wanderer)/(frameDur*speed));
 	}
+	wanderer.upPath=upPath;
 	// dest.col="red";
-	var detour={pos:null,col:"green"};
-	// points.push(detour);
 	var tim=Date.now();
 	while(1){
 		if (wanderer.stack.length==0) {
 			speed=getSpeed();
-			//dest.pos=getFarDest(wanderer.x,wanderer.y,wanderer.r);
+			/// used to be : dest.pos=getFarDest(wanderer.x,wanderer.y,wanderer.r);
 		}else {
 			dest.pos=wanderer.stack.pop();
 		}
@@ -98,16 +95,6 @@ async function robot(){
 			var proj=[+Infinity,null];
 			rounds.forEach(obstacle =>{
 				if (obstacle==wanderer) return;
-				///if round or its dest is inside obstacle: move dest out
-				// if ( circle_collision.isPointInside({x:obstacle.x,y:obstacle.y,r:obstacle.r+wanderer.r}, wanderer)) {
-					// let tmp=circle_collision.reject({x:obstacle.x,y:obstacle.y,r:obstacle.r+wanderer.r+clearance}, wanderer);
-					// wanderer.x=tmp.x; wanderer.y=tmp.y;
-					// upPath();
-				// }
-				// if ( circle_collision.isPointInside({x:obstacle.x,y:obstacle.y,r:obstacle.r+wanderer.r}, dest.pos)) {
-					// dest.pos=circle_collision.reject({x:obstacle.x,y:obstacle.y,r:obstacle.r+wanderer.r+clearance}, dest.pos);
-					// upPath();
-				// }
 				/// * make obstacle immobile by substracting its speed to our speed
 				/// * project obstacle's center on current traj
 				/// * check if projection is ahead of us and not too far (between current pos and dest)
@@ -125,12 +112,10 @@ async function robot(){
 					{x:tmp2.x,y:tmp2.y,r:obstacle.r+wanderer.r+clearance}
 					, tmp
 				);
-				detour.pos=tmp;
 				proj=[ret, tmp];
 			});
 			if (proj[1]){
 				proj=proj[1];
-				// detour.pos=proj;
 				wanderer.stack.push(dest.pos);
 				dest.pos=proj;
 				upPath();
@@ -153,7 +138,7 @@ curPair.next=function(){
 		if (curPair[0]>=rounds.length-1) {curPair[0]=1;curPair[1]=0;} else {curPair[0]++;curPair[1]=0; }
 	} else curPair[1]++;
 }
-function handleCollisions(){
+function handleCollisions(){ /// do not do rounds[i].upPath() on purpose so rounds dont stay stuck
 	do{
 		var a=rounds[curPair[0]], b=rounds[curPair[1]];
 		if (a==null || b==null) break;
@@ -204,18 +189,21 @@ function draw() {
 	ctx.fillStyle="#00000022";ctx.fillRect(0,0,cv.width,cv.height);
 	rounds.forEach(rd =>{
 		if (rd.type==null) {drawCircle(rd.x,rd.y,rd.r); return;}
-		drawCircle(rd.x,rd.y,rd.r);//,getcol(rd.stack.length).toColor());
+		var col=getcol(rd.stack.length).toColor();
+		drawCircle(rd.x,rd.y,rd.r); //,col);
 		ctx.textAlign    = 'center';
 		ctx.textBaseline = 'middle'; 
-		ctx.font = "20px Arial";ctx.fillStyle="red";ctx.fillText(">v<^".substr(rd.type,1), rd.x, rd.y);
-		// ctx.font = "10px Arial";ctx.fillStyle="LightYellow";ctx.fillText("x", rd.dest.pos.x, rd.dest.pos.y);
-		// rd.stack.forEach(dt=>{ drawCircle(dt.x,dt.y,2); } );
+		ctx.font = "20px Arial";ctx.fillStyle="gray";ctx.fillText(">v<^".substr(rd.type,1), rd.x, rd.y);
+		// ctx.font = "10px Arial";ctx.fillStyle=col;ctx.fillText("x", rd.dest.pos.x, rd.dest.pos.y);
+		// rd.stack.forEach(dt=>{ drawCircle(dt.x,dt.y,2,col); } );
 	});
 	// points.forEach(pt=>pt.pos &&  drawCircle(pt.pos.x, pt.pos.y, 2, pt.col));
 	///Palette
 	// for (let i=0;i<6;i++) {ctx.fillStyle= getColorFast(i).toColor();ctx.beginPath(); ctx.rect(0,i*20,25,20);ctx.fill();}
 	requestAnimationFrame(draw);
 }
+
+/*** Start of Program ***/
 
 draw();
 
@@ -225,6 +213,7 @@ rounds.push({r:100, x:w/2, y:h/2, vec:[0,0],immobile:true});
 async function recurse(f,arg){ f(arg).then(()=>recurse(f,arg)); }
 const NB_ROBOTS=12;
 for (let i =0; i<NB_ROBOTS;++i) recurse(robot);
+
 setInterval(() => {for (let i =0; i< rounds.length*(rounds.length-1)/2;++i)handleCollisions();}, 5);
 
 
