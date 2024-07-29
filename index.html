@@ -62,20 +62,20 @@ async function robot(){
 		,vec:[0,0]
 		,type:side
 	};
-	rounds.push(wanderer);
+	wanderer.stack=[];
 	var dest={pos:[
 		 side & 1 ? wanderer.x              : (side > 1 ? 25 : w-25 )
 		,side & 1 ? (side > 1 ? 25 : h-25 ) : wanderer.y
 	]};
+	wanderer.dest=dest;
+	rounds.push(wanderer);
 	var speed;
 	wanderer.step=0;
-	function getSpeed(){return 40*(1+0.5*ran()); } /// speed in pixel per second
+	function getSpeed(){return 60*(1+0.5*ran()); } /// speed in pixel per second
 	function upPath(){
 		wanderer.vec=mult(normed(dif(dest.pos,wanderer)),frameDur*speed);
 		wanderer.step=flo(dist(dest.pos,wanderer)/(frameDur*speed));
 	}
-	wanderer.stack=[];
-	wanderer.dest=dest;
 	// dest.col="red";
 	var detour={pos:null,col:"green"};
 	// points.push(detour);
@@ -88,7 +88,8 @@ async function robot(){
 			dest.pos=wanderer.stack.pop();
 		}
 		upPath();
-		while (wanderer.step-- > 0) {
+		while (wanderer.step > 0) {
+			wanderer.step--;
 			var dur=frameDur*1000-(Date.now()-tim);
 			if (dur<1) {console.log(dur); dur=1; }
 			await new Promise(g=>setTimeout(g,dur));
@@ -98,15 +99,15 @@ async function robot(){
 			rounds.forEach(obstacle =>{
 				if (obstacle==wanderer) return;
 				///if round or its dest is inside obstacle: move dest out
-				if ( circle_collision.isPointInside({x:obstacle.x,y:obstacle.y,r:obstacle.r+wanderer.r}, wanderer)) {
-					let tmp=circle_collision.reject({x:obstacle.x,y:obstacle.y,r:obstacle.r+wanderer.r+clearance}, wanderer);
-					wanderer.x=tmp.x; wanderer.y=tmp.y;
-					upPath();
-				}
-				if ( circle_collision.isPointInside({x:obstacle.x,y:obstacle.y,r:obstacle.r+wanderer.r}, dest.pos)) {
-					dest.pos=circle_collision.reject({x:obstacle.x,y:obstacle.y,r:obstacle.r+wanderer.r+clearance}, dest.pos);
-					upPath();
-				}
+				// if ( circle_collision.isPointInside({x:obstacle.x,y:obstacle.y,r:obstacle.r+wanderer.r}, wanderer)) {
+					// let tmp=circle_collision.reject({x:obstacle.x,y:obstacle.y,r:obstacle.r+wanderer.r+clearance}, wanderer);
+					// wanderer.x=tmp.x; wanderer.y=tmp.y;
+					// upPath();
+				// }
+				// if ( circle_collision.isPointInside({x:obstacle.x,y:obstacle.y,r:obstacle.r+wanderer.r}, dest.pos)) {
+					// dest.pos=circle_collision.reject({x:obstacle.x,y:obstacle.y,r:obstacle.r+wanderer.r+clearance}, dest.pos);
+					// upPath();
+				// }
 				/// * make obstacle immobile by substracting its speed to our speed
 				/// * project obstacle's center on current traj
 				/// * check if projection is ahead of us and not too far (between current pos and dest)
@@ -120,7 +121,10 @@ async function robot(){
 				let tmp=add(wanderer,mult(wanderer.vec,ret));
 				let tmp2 = add(obstacle,mult(obstacle.vec,ret));
 				if (dist(tmp2,tmp)>obstacle.r+wanderer.r) return;
-				tmp=circle_collision.reject({x:tmp2.x,y:tmp2.y,r:obstacle.r+wanderer.r+clearance}, tmp);
+				tmp=circle_collision.reject(
+					{x:tmp2.x,y:tmp2.y,r:obstacle.r+wanderer.r+clearance}
+					, tmp
+				);
 				detour.pos=tmp;
 				proj=[ret, tmp];
 			});
@@ -142,6 +146,35 @@ async function robot(){
 		}
 	}
 }
+
+var curPair=[1,0];
+curPair.next=function(){
+	if( curPair[1]==curPair[0]-1) {
+		if (curPair[0]>=rounds.length-1) {curPair[0]=1;curPair[1]=0;} else {curPair[0]++;curPair[1]=0; }
+	} else curPair[1]++;
+}
+function handleCollisions(){
+	do{
+		var a=rounds[curPair[0]], b=rounds[curPair[1]];
+		if (a==null || b==null) break;
+		if (a.immobile && b.immobile) break;
+		if ( dist(a,b)>a.r+b.r) break 
+		if (a.immobile || b.immobile) {
+			if (b.immobile) {let tmp=b;b=a;a=tmp;}
+			var tmp=circle_collision.reject({x:a.x,y:a.y,r:a.r+b.r},b);
+			b.x=tmp.x; b.y=tmp.y;
+			break;
+		}
+		var vec=normed(dif(b,a)); //TODO:move code to circle_collision{}
+		var center=middle(b,a);
+		var tmp=add(center,mult(vec,(a.r+b.r)/2));
+		var tmp2=add(center,mult(vec,-(a.r+b.r)/2));
+		b.x=tmp.x; b.y=tmp.y;
+		a.x=tmp2.x; a.y=tmp2.y;
+	}while(0);
+	curPair.next();
+}
+	
 
 
 
@@ -171,28 +204,28 @@ function draw() {
 	ctx.fillStyle="#00000022";ctx.fillRect(0,0,cv.width,cv.height);
 	rounds.forEach(rd =>{
 		if (rd.type==null) {drawCircle(rd.x,rd.y,rd.r); return;}
-		drawCircle(rd.x,rd.y,rd.r,getcol(rd.stack.length).toColor());
+		drawCircle(rd.x,rd.y,rd.r);//,getcol(rd.stack.length).toColor());
 		ctx.textAlign    = 'center';
 		ctx.textBaseline = 'middle'; 
 		ctx.font = "20px Arial";ctx.fillStyle="red";ctx.fillText(">v<^".substr(rd.type,1), rd.x, rd.y);
-		ctx.font = "10px Arial";ctx.fillStyle="LightYellow";ctx.fillText("x", rd.dest.pos.x, rd.dest.pos.y);
-		rd.stack.forEach(dt=>{ drawCircle(dt.x,dt.y,2); } );
+		// ctx.font = "10px Arial";ctx.fillStyle="LightYellow";ctx.fillText("x", rd.dest.pos.x, rd.dest.pos.y);
+		// rd.stack.forEach(dt=>{ drawCircle(dt.x,dt.y,2); } );
 	});
-	points.forEach(pt=>pt.pos &&  drawCircle(pt.pos.x, pt.pos.y, 2, pt.col));
+	// points.forEach(pt=>pt.pos &&  drawCircle(pt.pos.x, pt.pos.y, 2, pt.col));
 	///Palette
-	for (let i=0;i<6;i++) {ctx.fillStyle= getColorFast(i).toColor();ctx.beginPath(); ctx.rect(0,i*20,25,20);ctx.fill();}
+	// for (let i=0;i<6;i++) {ctx.fillStyle= getColorFast(i).toColor();ctx.beginPath(); ctx.rect(0,i*20,25,20);ctx.fill();}
 	requestAnimationFrame(draw);
 }
 
 draw();
 
-rounds.push({r:100, x:w/2, y:h/2, vec:[0,0]});
+rounds.push({r:100, x:w/2, y:h/2, vec:[0,0],immobile:true});
 
 
-async function recurse(arg){ robot(arg).then(()=>recurse(arg)); }
-const NB_ROBOTS=3;
-for (let i =0; i<NB_ROBOTS;++i) recurse();
-
+async function recurse(f,arg){ f(arg).then(()=>recurse(f,arg)); }
+const NB_ROBOTS=12;
+for (let i =0; i<NB_ROBOTS;++i) recurse(robot);
+setInterval(() => {for (let i =0; i< rounds.length*(rounds.length-1)/2;++i)handleCollisions();}, 5);
 
 
 
