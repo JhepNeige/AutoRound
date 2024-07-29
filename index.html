@@ -189,7 +189,7 @@ function draw() {
 	ctx.fillStyle="#00000022";ctx.fillRect(0,0,cv.width,cv.height);
 	rounds.forEach(rd =>{
 		if (rd.type==null) {drawCircle(rd.x,rd.y,rd.r); return;}
-		var col=getcol(rd.stack.length).toColor();
+		// var col=getcol(rd.stack.length).toColor();
 		drawCircle(rd.x,rd.y,rd.r); //,col);
 		ctx.textAlign    = 'center';
 		ctx.textBaseline = 'middle'; 
