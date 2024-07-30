@@ -150,7 +150,9 @@ function handleCollisions(){ /// do not do rounds[i].upPath() on purpose so roun
 			b.x=tmp.x; b.y=tmp.y;
 			break;
 		}
-		var vec=normed(dif(b,a)); //TODO:move code to circle_collision{}
+		var vec=dif(b,a); //TODO:move code to circle_collision{}
+		if (norm(vec)<1e-9) break;
+		vec=normed(vec);
 		var center=middle(b,a);
 		var tmp=add(center,mult(vec,(a.r+b.r)/2));
 		var tmp2=add(center,mult(vec,-(a.r+b.r)/2));
@@ -175,27 +177,28 @@ function drawCircle(x,y,r,col='white',fill=false) {
 	}
 }
 
-//bunch a hardcode, look away
-function getcol(arg){
-	if (arg<1) return getColorFast(0,1-arg); /// 0=red
-	arg-=1;
-	if (arg>5) { console.log("overstack", arg+1); }
-	arg=Math.min(arg,5);
-	return getColorFast(arg);
-}
+
 
 function draw() {
 	// ctx.clearRect(0,0,cv.width,cv.height);
 	ctx.fillStyle="#00000022";ctx.fillRect(0,0,cv.width,cv.height);
 	rounds.forEach(rd =>{
 		if (rd.type==null) {drawCircle(rd.x,rd.y,rd.r); return;}
+		//bunch a hardcode, look away
+		function getcol(arg){
+			if (arg<1) return getColorFast(0,1-arg); /// 0=red
+			arg-=1;
+			if (arg>5) { console.log(rounds.indexOf(rd),"overstack", arg+1); }
+			arg=Math.min(arg,5);
+			return getColorFast(arg);
+		}
 		var col=getcol(rd.stack.length).toColor();
-		drawCircle(rd.x,rd.y,rd.r); //,col);
+		drawCircle(rd.x,rd.y,rd.r,col);
 		ctx.textAlign    = 'center';
 		ctx.textBaseline = 'middle'; 
 		ctx.font = "20px Arial";ctx.fillStyle="gray";ctx.fillText(">v<^".substr(rd.type,1), rd.x, rd.y);
-		// ctx.font = "10px Arial";ctx.fillStyle=col;ctx.fillText("x", rd.dest.pos.x, rd.dest.pos.y);
-		// rd.stack.forEach(dt=>{ drawCircle(dt.x,dt.y,2,col); } );
+		ctx.font = "10px Arial";ctx.fillStyle=col;ctx.fillText("x", rd.dest.pos.x, rd.dest.pos.y);
+		rd.stack.forEach(dt=>{ drawCircle(dt.x,dt.y,2,col); } );
 	});
 	// points.forEach(pt=>pt.pos &&  drawCircle(pt.pos.x, pt.pos.y, 2, pt.col));
 	///Palette
@@ -214,8 +217,9 @@ async function recurse(f,arg){ f(arg).then(()=>recurse(f,arg)); }
 const NB_ROBOTS=12;
 for (let i =0; i<NB_ROBOTS;++i) recurse(robot);
 
-setInterval(() => {for (let i =0; i< rounds.length*(rounds.length-1)/2;++i)handleCollisions();}, 5);
+var hnd=setInterval(() => {for (let i =0; i< rounds.length*(rounds.length-1)/2;++i)handleCollisions();}, 5);
 
+// setTimeout(()=>{ clearInterval(hnd);},500);
 
 
 </script>
