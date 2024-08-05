@@ -8,6 +8,8 @@ Auto Round
 </title>
 <script src="geometry.js?1"></script>
 <script src="libColor.js"></script>
+<script src="../projet 3 - path finding/polygon_collision.js?1"></script>
+<script src="../projet 3 - path finding/mesh.js"></script> <!-- requires geometry.js & polygon_collision.js -->
 </head>
 <body style="margin:0px">
 <canvas id="cv" width=600 height=500 style="background:black;border:solid 1px red; /*transform:scale(1,-1)*/"></canvas>
@@ -39,11 +41,7 @@ function shout(msg="MOTHEATER") {
 
 /// Resources
 
-// var obstacle={r:50,x:175,y:200};
-// var wanderer={r:20,x:35,y:30};
-
 var rounds=[];
-var points=[];
 
 /// Brain
 
@@ -60,13 +58,13 @@ async function robot(){
 		,vec:[0,0]
 		,type:side
 	};
-	wanderer.stack=[];
 	var dest={pos:[
 		 side & 1 ? wanderer.x              : (side > 1 ? 25 : w-25 )
 		,side & 1 ? (side > 1 ? 25 : h-25 ) : wanderer.y
 	]};
 	wanderer.dest=dest;
 	rounds.push(wanderer);
+	insert(wanderer); ///mesh.js
 	var speed;
 	wanderer.step=0;
 	function getSpeed(){return 60*(1+0.5*ran()); } /// speed in pixel per second
@@ -74,7 +72,7 @@ async function robot(){
 		wanderer.vec=mult(normed(dif(dest.pos,wanderer)),frameDur*speed);
 		wanderer.step=flo(dist(dest.pos,wanderer)/(frameDur*speed));
 	}
-	wanderer.upPath=upPath;
+	wanderer.stack=[];
 	// dest.col="red";
 	var tim=Date.now();
 	while(1){
@@ -82,7 +80,7 @@ async function robot(){
 			speed=getSpeed();
 			/// used to be : dest.pos=getFarDest(wanderer.x,wanderer.y,wanderer.r);
 		}else {
-			dest.pos=wanderer.stack.pop();
+			dest.pos=wanderer.stack.pop(); // why no pop .step too? in fact is good
 		}
 		upPath();
 		while (wanderer.step > 0) {
@@ -127,6 +125,9 @@ async function robot(){
 		if (wanderer.stack.length==0) {
 			// wanderer.vec=[0,0];
 			rounds.remove(wanderer);
+			initMesh(w,h);
+			flipPool=[];
+			rounds.forEach(rd=>insert(rd));
 			return;
 		}
 	}
@@ -150,7 +151,9 @@ function handleCollisions(){ /// do not do rounds[i].upPath() on purpose so roun
 			b.x=tmp.x; b.y=tmp.y;
 			break;
 		}
-		var vec=normed(dif(b,a)); //TODO:move code to circle_collision{}
+		var vec=dif(b,a); //TODO:move code to circle_collision{}
+		if (norm(vec)<1e-9) break;
+		vec=normed(vec);
 		var center=middle(b,a);
 		var tmp=add(center,mult(vec,(a.r+b.r)/2));
 		var tmp2=add(center,mult(vec,-(a.r+b.r)/2));
@@ -174,30 +177,43 @@ function drawCircle(x,y,r,col='white',fill=false) {
 		ctx.strokeStyle=col;ctx.stroke();
 	}
 }
-
-//bunch a hardcode, look away
-function getcol(arg){
-	if (arg<1) return getColorFast(0,1-arg); /// 0=red
-	arg-=1;
-	if (arg>5) { console.log("overstack", arg+1); }
-	arg=Math.min(arg,5);
-	return getColorFast(arg);
+function drawSeg(a,b,col="white"){
+	ctx.strokeStyle=col;
+	ctx.beginPath();
+	ctx.moveTo(a.x,a.y);
+	ctx.lineTo(b.x,b.y);
+	ctx.stroke();
 }
+
 
 function draw() {
 	// ctx.clearRect(0,0,cv.width,cv.height);
 	ctx.fillStyle="#00000022";ctx.fillRect(0,0,cv.width,cv.height);
 	rounds.forEach(rd =>{
 		if (rd.type==null) {drawCircle(rd.x,rd.y,rd.r); return;}
-		// var col=getcol(rd.stack.length).toColor();
-		drawCircle(rd.x,rd.y,rd.r); //,col);
+		//bunch a hardcode, look away
+		function getcol(arg){
+			if (arg<1) return getColorFast(0,1-arg); /// 0=red
+			arg-=1;
+// if (arg>5) { console.log(rounds.indexOf(rd),"overstack", arg+1); }
+			arg=Math.min(arg,5);
+			return getColorFast(arg);
+		}
+		var col=getcol(rd.stack.length).toColor();
+		drawCircle(rd.x,rd.y,rd.r,col);
 		ctx.textAlign    = 'center';
 		ctx.textBaseline = 'middle'; 
-		ctx.font = "20px Arial";ctx.fillStyle="gray";ctx.fillText(">v<^".substr(rd.type,1), rd.x, rd.y);
-		// ctx.font = "10px Arial";ctx.fillStyle=col;ctx.fillText("x", rd.dest.pos.x, rd.dest.pos.y);
-		// rd.stack.forEach(dt=>{ drawCircle(dt.x,dt.y,2,col); } );
+		// ctx.font = "20px Arial";ctx.fillStyle="gray";ctx.fillText(">v<^".substr(rd.type,1), rd.x, rd.y);
+		ctx.font = "10px Arial";ctx.fillStyle=col;ctx.fillText("x", rd.dest.pos.x, rd.dest.pos.y);
+		rd.stack.forEach(dt=>{ drawCircle(dt.x,dt.y,2,col); } );
 	});
-	// points.forEach(pt=>pt.pos &&  drawCircle(pt.pos.x, pt.pos.y, 2, pt.col));
+	for (let ind in lnk) { ///lnk,get_lnk,vertices are from from mesh.js
+		if (lnk[ind].length==0) continue;
+		let seg=get_lnk(ind);
+		if (seg[0]<3 || seg[1]<3) continue; /// not the segments linked to the super triangle
+		drawSeg(vertices[seg[0]], vertices[seg[1]], "grey");
+	}
+
 	///Palette
 	// for (let i=0;i<6;i++) {ctx.fillStyle= getColorFast(i).toColor();ctx.beginPath(); ctx.rect(0,i*20,25,20);ctx.fill();}
 	requestAnimationFrame(draw);
@@ -207,16 +223,43 @@ function draw() {
 
 draw();
 
+initMesh(w,h);
 
 rounds.push({r:100, x:w/2, y:h/2, vec:[0,0],immobile:true});
-
+insert(rounds[0]);
 
 async function recurse(f,arg){ f(arg).then(()=>recurse(f,arg)); }
 const NB_ROBOTS=12;
 for (let i =0; i<NB_ROBOTS;++i) recurse(robot);
 
-setInterval(() => {for (let i =0; i< rounds.length*(rounds.length-1)/2;++i)handleCollisions();}, 5);
+const NB_FLIPS=1000;
+recurse(async function(){ /// Mesh link flipping loop
+	var tim=Date.now();
+	if (flipPool.length==0) initFlips();
+	var rst=false;
+	for (let i =0; i< NB_FLIPS;++i){
+		doOneFlip();
+		if (lnk.find(x=>x && x.length>2)){rst=true; break;}
+		if (flipPool.length==0)break;
+	}
+	if (rst) {
+console.warn("fucked up link");
+		initMesh(w,h);
+		flipPool=[];
+		rounds.forEach(rd=>insert(rd));
+	}
+	var dur=10-(Date.now()-tim);
+if (dur<1) console.log("bad flip loop");
+	await new Promise(g=>setTimeout(g,dur));
+});
 
+recurse(async function(){ /// Collision loop
+	var tim=Date.now();
+	for (let i =0; i< rounds.length*(rounds.length-1)/2;++i)handleCollisions();
+	var dur=10-(Date.now()-tim);
+if (dur<1) console.log("bad collision loop");
+	await new Promise(g=>setTimeout(g,dur));
+});
 
 </script>
 
