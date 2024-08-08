@@ -100,14 +100,16 @@ function gauss(arg){
 }*/
 
 /// check if d is the circumcircle of triangle [a,b,c]
-polygon_collision.isInCircle=function (a,b,c,d) {
+polygon_collision.isInCircle=function (a,b,c,d,debug) {
 	var m=[[1,a.x,a.y,a.x*a.x+a.y*a.y],
 	       [1,b.x,b.y,b.x*b.x+b.y*b.y],
 	       [1,c.x,c.y,c.x*c.x+c.y*c.y],
 		   [1,d.x,d.y,d.x*d.x+d.y*d.y]];
 	// var d=crout(m);
+if (debug==1) return m.map(x=>x.join('\t')).join('\n'); 
 /*console.log(m.map(x=>x.join('\t')).join('\n') );*/ /*console.log(d,gauss(m).det);*/
 	var d=gauss(m).det;
+if (debug==2) return d; 
 	return d<0;
 }
 

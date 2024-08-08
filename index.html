@@ -13,6 +13,7 @@ Auto Round
 </head>
 <body style="margin:0px">
 <canvas id="cv" width=600 height=500 style="background:black;border:solid 1px red; /*transform:scale(1,-1)*/"></canvas>
+<div id="outDiv"></div>
 <script>
 
 if (String(location).indexOf("jhepneige.github.io")>-1) document.title+=" online";
@@ -27,9 +28,15 @@ function hexByte(x){return x.toString(16).padStart(2,"0") ;}
 var cv=document.getElementById("cv");
 var ctx=cv.getContext("2d");
 var w=cv.width, h=cv.height;
-document.getElementById("cv").addEventListener("mouseup", e=>{
-	shout();
-});
+
+/*var release=[];
+function forwardOnce() {
+	while(release.length>0) release.pop()();
+	
+}
+document.body.addEventListener("keypress", forwardOnce);*/
+document.getElementById("cv").addEventListener("mouseup", shout);
+
 function shout(msg="MOTHEATER") {
 	var el=document.createElement("div");
 	el.textContent=msg;
@@ -44,6 +51,40 @@ function shout(msg="MOTHEATER") {
 var rounds=[];
 
 /// Brain
+
+function getGoodPath(rd){
+	var ind=vertices.indexOf(rd);
+	var pat=getPath(
+		 ind
+		,ind+1
+		,(i,a,b,sz)=>sz-(a.r==null?0:a.r)-(b.r==null?0:b.r)>2*rd.r
+		,'t'
+	);
+	if (pat=='fail') return 'fail';
+	///below: eliminate triangles from path
+	///+ move path vertice to optimized position so circle don't interfere (middle of free space)
+	///+ setup path to go through straightenPath
+	let ret=[vertices[ind]],n=pat.length-1-(pat.length%2==0);
+	for (let i=1+2*(pat.length>3);i<n;i+=2) {
+		let [a,b]=[vertices[pat[i][0]], vertices[pat[i][1]]];
+		let k,q,div;
+		div=1/dist(a,b);
+		k=(a.r ? a.r*div:0); q=1-(b.r ? b.r*div:0); /// no need `&& a!=rd` because we skip first link in for statement
+		[k,q] = [(k+q)/2,(q-k)/2 - rd.r*div];
+		let tmp=[a.x*(1-k)+k*b.x, a.y*(1-k)+k*b.y ];
+		tmp.origin=[tmp.x,tmp.y];
+		tmp.rg=q;
+		tmp.vec=dif(b,a);
+		tmp.corr=0;
+		ret.push( tmp );
+	}
+	ret.push(vertices[ind+1]);
+	ret.indic=+Infinity;
+	var MAX_STRT=99;
+	while(ret.indic>0.0001 && MAX_STRT-- > 0) ret=straightenPath(ret);
+	return ret;
+}
+
 
 //TODO: stuff hardcoded right and left
 const frameDur=0.010; ///second
@@ -62,17 +103,21 @@ async function robot(){
 		 side & 1 ? wanderer.x              : (side > 1 ? 25 : w-25 )
 		,side & 1 ? (side > 1 ? 25 : h-25 ) : wanderer.y
 	]};
+	wanderer.x+=(Math.random()-0.5)*0.1;wanderer.y+=(Math.random()-0.5)*0.1;
+	dest.pos.x+=(Math.random()-0.5)*0.1;dest.pos.y+=(Math.random()-0.5)*0.1;
 	wanderer.dest=dest;
+	wanderer.goal=dest.pos;
+	wanderer.stack=[];
 	rounds.push(wanderer);
 	insert(wanderer); ///mesh.js
+	insert(wanderer.goal);
 	var speed;
 	wanderer.step=0;
-	function getSpeed(){return 60*(1+0.5*ran()); } /// speed in pixel per second
+	function getSpeed(){return 50*(1+0.5*ran()); } /// speed in pixel per second
 	function upPath(){
 		wanderer.vec=mult(normed(dif(dest.pos,wanderer)),frameDur*speed);
 		wanderer.step=flo(dist(dest.pos,wanderer)/(frameDur*speed));
 	}
-	wanderer.stack=[];
 	// dest.col="red";
 	var tim=Date.now();
 	while(1){
@@ -88,6 +133,7 @@ async function robot(){
 			var dur=frameDur*1000-(Date.now()-tim);
 			if (dur<1) {console.log(dur); dur=1; }
 			await new Promise(g=>setTimeout(g,dur));
+//await new Promise(g=>release.push(g));
 			tim=Date.now();
 
 			var proj=[+Infinity,null];
@@ -96,8 +142,8 @@ async function robot(){
 				/// * make obstacle immobile by substracting its speed to our speed
 				/// * project obstacle's center on current traj
 				/// * check if projection is ahead of us and not too far (between current pos and dest)
-				let vec=dif(wanderer.vec,obstacle.vec);//wanderer.vec;//
-				if (norm(vec)< 1e-9) return; //hardcoded
+				let vec=dif(wanderer.vec,obstacle.vec);
+				if (norm(vec)< 1e-9) return;
 				let ret=dot_prod(dif(obstacle,wanderer),normed(vec))/norm(vec);
 				if (ret<0 || ret> wanderer.step) return;
 				if (obstacle.step!=null && ret>obstacle.step) return; 
@@ -113,6 +159,8 @@ async function robot(){
 				proj=[ret, tmp];
 			});
 			if (proj[1]){
+				/*let pat=getGoodPath(wanderer);
+				if (pat=='fail')proj=proj[1]; else proj=pat[0];*/
 				proj=proj[1];
 				wanderer.stack.push(dest.pos);
 				dest.pos=proj;
@@ -123,11 +171,8 @@ async function robot(){
 			wanderer.y+=wanderer.vec.y;
 		} /// end while step is more than zero
 		if (wanderer.stack.length==0) {
-			// wanderer.vec=[0,0];
 			rounds.remove(wanderer);
-			initMesh(w,h);
-			flipPool=[];
-			rounds.forEach(rd=>insert(rd));
+			resetMesh(); // is there an efficient way to avoid that? 
 			return;
 		}
 	}
@@ -185,11 +230,10 @@ function drawSeg(a,b,col="white"){
 	ctx.stroke();
 }
 
-
 function draw() {
 	// ctx.clearRect(0,0,cv.width,cv.height);
 	ctx.fillStyle="#00000022";ctx.fillRect(0,0,cv.width,cv.height);
-	rounds.forEach(rd =>{
+	rounds.forEach((rd,ii) =>{
 		if (rd.type==null) {drawCircle(rd.x,rd.y,rd.r); return;}
 		//bunch a hardcode, look away
 		function getcol(arg){
@@ -200,19 +244,27 @@ function draw() {
 			return getColorFast(arg);
 		}
 		var col=getcol(rd.stack.length).toColor();
-		drawCircle(rd.x,rd.y,rd.r,col);
+		drawCircle(rd.x,rd.y,rd.r);//,col);
 		ctx.textAlign    = 'center';
 		ctx.textBaseline = 'middle'; 
 		// ctx.font = "20px Arial";ctx.fillStyle="gray";ctx.fillText(">v<^".substr(rd.type,1), rd.x, rd.y);
-		ctx.font = "10px Arial";ctx.fillStyle=col;ctx.fillText("x", rd.dest.pos.x, rd.dest.pos.y);
-		rd.stack.forEach(dt=>{ drawCircle(dt.x,dt.y,2,col); } );
+		// ctx.font = "10px Arial";ctx.fillStyle=col;ctx.fillText("x", rd.dest.pos.x, rd.dest.pos.y);
+		// rd.stack.forEach(dt=>{ drawCircle(dt.x,dt.y,2,col); } );
+		if (ii<7){
+			var ret=getGoodPath(rd);
+			for (let i=0;i<ret.length-1;++i) {
+				drawSeg(ret[i],ret[i+1],getcol(ii).toColor());
+			}
+		}
 	});
 	for (let ind in lnk) { ///lnk,get_lnk,vertices are from from mesh.js
 		if (lnk[ind].length==0) continue;
 		let seg=get_lnk(ind);
-		if (seg[0]<3 || seg[1]<3) continue; /// not the segments linked to the super triangle
-		drawSeg(vertices[seg[0]], vertices[seg[1]], "grey");
+		// if (seg[0]<3 || seg[1]<3) continue; /// not the segments linked to the super triangle
+		drawSeg(vertices[seg[0]], vertices[seg[1]], "#444444");
 	}
+
+// document.getElementById("outDiv").textContent=eyo.map(x=> x.toExponential().substr(0,5)).join(' ');
 
 	///Palette
 	// for (let i=0;i<6;i++) {ctx.fillStyle= getColorFast(i).toColor();ctx.beginPath(); ctx.rect(0,i*20,25,20);ctx.fill();}
@@ -233,6 +285,15 @@ async function recurse(f,arg){ f(arg).then(()=>recurse(f,arg)); }
 const NB_ROBOTS=12;
 for (let i =0; i<NB_ROBOTS;++i) recurse(robot);
 
+function resetMesh(){
+	initMesh(w,h);
+	flipPool=[];
+	rounds.forEach(rd=>{
+		insert(rd); 
+		if (rd.goal)insert(rd.goal); //is it bad when wanderer reaches goal?
+	});
+}
+
 const NB_FLIPS=1000;
 recurse(async function(){ /// Mesh link flipping loop
 	var tim=Date.now();
@@ -240,14 +301,12 @@ recurse(async function(){ /// Mesh link flipping loop
 	var rst=false;
 	for (let i =0; i< NB_FLIPS;++i){
 		doOneFlip();
-		if (lnk.find(x=>x && x.length>2)){rst=true; break;}
+		if (lnk.find(x=>x && x.length>2)){rst=true; break;} // TODO: prevention instead of cure
 		if (flipPool.length==0)break;
 	}
 	if (rst) {
 console.warn("fucked up link");
-		initMesh(w,h);
-		flipPool=[];
-		rounds.forEach(rd=>insert(rd));
+		resetMesh();
 	}
 	var dur=10-(Date.now()-tim);
 if (dur<1) console.log("bad flip loop");

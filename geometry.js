@@ -38,6 +38,14 @@ function cross_prod(a,b) {
 function point_of_line(d,t) { /// lines are d=[point, vec]
 	return {x: d[0].x +t*d[1].x, y:d[0].y +t*d[1].y };
 }
+function intersections(d,dd){
+	let det=1/(d[1].x*dd[1].y-d[1].y*dd[1].x);
+	return [
+		 ((dd[0].x-d[0].x)*dd[1].y+(d[0].y-dd[0].y)*dd[1].x)*det
+		,((dd[0].x-d[0].x)*d [1].y+(d[0].y-dd[0].y)*d [1].x)*det
+	];
+}
+
 function proj_dist(p, d) {
 	return cross_prod(dif(p, d[0]),d[1]);
 }
