@@ -8,8 +8,8 @@ function getColorFast(hue,sat=0.0,val=1.0) {/// input is a float between 0 and 6
 	s=Math.floor(s*255);
 	if (i%2==1)s=255-s;
 	var ret=[];
-	ret[inB[i]]=255*val;
-	ret[ins[i]]=sat*255*val;
-	ret[inm[i]]=(sat*255+(1-sat)*s)*val;
+	ret[inB[i]]=Math.floor(255*val);
+	ret[ins[i]]=Math.floor(sat*255*val);
+	ret[inm[i]]=Math.floor((sat*255+(1-sat)*s)*val);
 	return ret;
 }
