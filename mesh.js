@@ -39,7 +39,7 @@ function insert(p) {
 		return polygon_collision.isPointInside(t.map(x=>vertices[x]), [arg.x,arg.y]); // could use a triangle specific algo for perf ?
 	}
 	var t=tri.find(x=>inside(x,p)); // TODO: this is O(n), use binary partition or walk() for O(ln(n))
-	if (!t) {console.warn("bad insertion",[p.x,p.y]); /*console.trace();*/ return 'fail';}
+	if (!t) {console.warn("bad insertion",[p.x,p.y]); return 'fail';}
 	var p_i=vertices.length;
 	vertices.push(p);
 	tri.remove(t); removeFromLinks(t);
