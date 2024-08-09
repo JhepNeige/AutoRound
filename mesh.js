@@ -27,20 +27,21 @@ var tri;
 var flipPool=[];
 
 /* Delaunay functions */
-function initMesh(w,h) {
-	vertices=[[0,0],[w*2,-1], [-1,h*2] ];
+function initMesh(w,h,off=0) {
+	vertices=[[0-off,0-off],[w+off,0-off], [w+off,h+off], [0-off,h+off] ];
+	tri=[[0,1,2],[2,3,0]];
 	lnk=[];
-	tri=[[0,1,2]];
 	triIntoLinks(tri[0]);
+	triIntoLinks(tri[1]);
 }
 function insert(p) {
-	var p_i=vertices.length;
-	vertices.push(p);
 	function inside(t,arg) {
 		return polygon_collision.isPointInside(t.map(x=>vertices[x]), [arg.x,arg.y]); // could use a triangle specific algo for perf ?
 	}
 	var t=tri.find(x=>inside(x,p)); // TODO: this is O(n), use binary partition or walk() for O(ln(n))
-if (!t) console.log("GIGA CLUSTER FUCK");
+	if (!t) {console.warn("bad insertion",[p.x,p.y]); /*console.trace();*/ return 'fail';}
+	var p_i=vertices.length;
+	vertices.push(p);
 	tri.remove(t); removeFromLinks(t);
 	var newt;
 	newt=[t[0],t[1],p_i]; tri.push(newt); triIntoLinks(newt);
@@ -81,12 +82,12 @@ function doOneFlip(job=flipPool){
 	var [i,j]=get_lnk(ind);
 	var quad_i=[... a,...b].distinct();
 	var quad=quad_i.map(x=>vertices[x]);
-if (quad.length<4) {
+/*if (quad.length<4) {
 	console.log("there you go", JSON.stringify(vertices.slice(3).map(x=>[x.x,x.y]) ));
 	console.log(lnk[ind]);
 	drawSeg(vertices[i],vertices[j]);
 	drawFillTri(lnk[ind][0],"red");
-}
+}*/
 	var center=get_tri_circum_center(...quad.slice(0,3));
 	var need=dist(center,quad[3])<= dist(center, quad[0]); 
 	/// if (! polygon_collision.isInCircle(...quad) ) continue;/// old: for matrix to work need good triangle points order
@@ -189,8 +190,9 @@ function straightenPath(arg){
 	for (let i =1;i<arg.length-1;++i){
 		var d=[arg[i-1],dif(arg[i+1],arg[i-1])];
 		var p;
-		p=intersections([arg[i].origin,arg[i].vec],d);
-		p=Math.min(arg[i].rg,Math.abs(p[0]))*Math.sign(p[0]);
+		if (cross_prod(d[1],arg[i].vec)<1e-9)p=0;
+		else p=intersections([arg[i].origin,arg[i].vec],d)[0];
+		p=Math.min(arg[i].rg,Math.abs(p))*Math.sign(p);
 		indic+=Math.abs(p-arg[i].corr);
 		arg[i].corr=p;
 		p=[]; for (let prop in arg[i])p[prop]=arg[i][prop];
@@ -199,6 +201,6 @@ function straightenPath(arg){
 		ret.push(p);
 	}
 	ret.push(arg[arg.length-1]);
-	ret.indic=indic/(arg.length-1);
+	ret.indic=indic; //should divide by arg.length?
 	return ret;
 }
