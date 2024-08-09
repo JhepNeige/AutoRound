@@ -61,12 +61,13 @@ function resetMesh(){
 	});
 }
 
-function getGoodPath(rd){
+const clearance=1; //hardcoded
+function getGoodPath(rd){ ///Good = no circle interfere (mesh.js only connects dots)
 	var ind=vertices.indexOf(rd);
 	if (ind==-1) return 'fail'; ///subsequent to insertion failure
 	var pat=getPath(
 		 ind
-		,ind+1
+		,ind+1 ///because rounds and goals are inserted one directly after the other
 		,(i,a,b,sz)=>sz-(a.r==null?0:a.r)-(b.r==null?0:b.r)>2*rd.r
 		,'t'
 	);
@@ -79,7 +80,7 @@ function getGoodPath(rd){
 		let [a,b]=[vertices[pat[i][0]], vertices[pat[i][1]]];
 		let k,q,div;
 		div=1/dist(a,b);
-		k=(a.r ? a.r*div:0); q=1-(b.r ? b.r*div:0); /// no need `&& a!=rd` because we skip first link in `for` statement
+		k=(a.r ? (a.r+clearance)*div:0); q=1-(b.r ? (b.r+clearance)*div:0); /// no need `&& a!=rd` because we skip first link in `for` statement
 		[k,q] = [(k+q)/2,(q-k)/2 - rd.r*div];
 		let tmp=[a.x*(1-k)+k*b.x, a.y*(1-k)+k*b.y ];
 		tmp.origin=[tmp.x,tmp.y];
@@ -98,7 +99,6 @@ function getGoodPath(rd){
 
 //TODO: stuff hardcoded right and left
 const frameDur=0.010; ///second
-const clearance=0.1;
 async function robot(){
 	var side=flo( 4*ran() );
 
@@ -288,19 +288,19 @@ function draw() {
 
 /*** Start of Program ***/
 
-draw();
+draw(); /// this loops
 
 initMesh(w,h);
 
 rounds.push({r:100, x:w/2, y:h/2, vec:[0,0],immobile:true});
 insert(rounds[0]);
 
-async function recurse(f,arg){ f(arg).then(()=>recurse(f,arg)); }
+async function recurse(f,arg){ f(arg).then(function rec(){recurse(f,arg)}); }
 const NB_ROBOTS=20;
 for (let i =0; i<NB_ROBOTS;++i) recurse(robot);
 
 const NB_FLIPS=1000;
-recurse(async function(){ /// Mesh link flipping loop
+recurse(async function MeshLinkFlipLoop(){
 	var tim=Date.now();
 	if (flipPool.length==0) initFlips();
 	var rst=false;
@@ -310,19 +310,19 @@ recurse(async function(){ /// Mesh link flipping loop
 		if (flipPool.length==0)break;
 	}
 	if (rst) {
-console.warn("fucked up link");
+		console.warn("fucked up link");
 		resetMesh();
 	}
-	var dur=10-(Date.now()-tim);
-if (dur<1) console.log("bad flip loop");
+	var dur=10-(Date.now()-tim); // hardcoded 10ms max duration flip loop
+	if (dur<1) console.log("bad flip loop");
 	await new Promise(g=>setTimeout(g,dur));
 });
 
-recurse(async function(){ /// Collision loop
+recurse(async function CollisionLoop(){
 	var tim=Date.now();
 	for (let i =0; i< rounds.length*(rounds.length-1)/2;++i)handleCollisions();
-	var dur=10-(Date.now()-tim);
-if (dur<1) console.log("bad collision loop");
+	var dur=10-(Date.now()-tim); // hardcoded 10ms max duration collision loop
+	if (dur<1) console.log("bad collision loop");
 	await new Promise(g=>setTimeout(g,dur));
 });
 
