@@ -89,7 +89,7 @@ function doOneFlip(job=flipPool){
 	drawFillTri(lnk[ind][0],"red");
 }*/
 	var center=get_tri_circum_center(...quad.slice(0,3));
-	var need=dist(center,quad[3])<= dist(center, quad[0]); 
+	var need=dist(center,quad[3]) < dist(center, quad[0]); 
 	/// if (! polygon_collision.isInCircle(...quad) ) continue;/// old: for matrix to work need good triangle points order
 	if (!need ) return;
 	tri.remove(a); removeFromLinks(a);
