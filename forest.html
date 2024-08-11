@@ -76,7 +76,7 @@ function getGoodPath(rd){ ///Good = no circle interfere (mesh.js only connects d
 	var pat=getPath(
 		 ind
 		,ind+1 ///because rounds and goals are inserted one directly after the other
-		,(i,a,b,sz)=>sz-(a.r==null?0:a.r)-(b.r==null?0:b.r)>2*rd.r
+		,(i,a,b,sz)=>a==rd||b==rd || sz-(a.r==null?0:a.r)-(b.r==null?0:b.r)>2*rd.r
 		,'t'
 	);
 	if (pat=='fail') return 'fail';
