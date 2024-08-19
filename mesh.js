@@ -195,7 +195,7 @@ function straightenPath(arg){
 	for (let i =1;i<arg.length-1;++i){
 		var d=[arg[i-1],dif(arg[i+1],arg[i-1])];
 		var p;
-		if (cross_prod(d[1],arg[i].vec)<1e-9)p=0;
+		if (Math.abs(cross_prod(d[1],arg[i].vec))<1e-9)p=0;
 		else p=intersections([arg[i].origin,arg[i].vec],d)[0];
 		p=Math.min(arg[i].rg,Math.abs(p))*Math.sign(p);
 		indic+=Math.abs(p-arg[i].corr);

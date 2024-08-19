@@ -33,7 +33,6 @@ var w=cv.width, h=cv.height;
 var release=[];
 function forwardOnce() {
 	while(release.length>0) release.pop()();
-	
 }
 document.body.addEventListener("keypress", forwardOnce);
 function moveGoal(e){
@@ -70,7 +69,7 @@ function resetMesh(){
 }
 
 const clearance=1; //hardcoded
-function getGoodPath(rd){ ///Good = no circle interfere (mesh.js only connects dots)
+async function getGoodPath(rd){ ///Good = no circle interfere (mesh.js only connects dots)
 	var ind=vertices.indexOf(rd);
 	if (ind==-1) return 'fail'; ///subsequent to insertion failure
 	var pat=getPath(
@@ -79,14 +78,12 @@ function getGoodPath(rd){ ///Good = no circle interfere (mesh.js only connects d
 		,(i,a,b,sz)=>a==rd || b==rd || (sz-(a.r==null?0:a.r)-(b.r==null?0:b.r)>2*rd.r)
 		,'t'
 	);
-// console.log("kek",vertices[ind].x,vertices[ind+1].x,pat);
 	if (pat=='fail') return 'fail';
 	///below: eliminate triangles from path
 	///+ move path vertices to optimized position so circles don't interfere (middle of free space)
 	///+ setup path to be processed by straightenPath
 	let ret=[vertices[ind]],n=pat.length-1-(pat.length%2==0);
 	for (let i=1+2*(pat.length>2);i<n;i+=2) { //pat.length can't be <3 .. need love
-// console.log("scan",pat[i]);
 		let [a,b]=[vertices[pat[i][0]], vertices[pat[i][1]]];
 		let k,q,div;
 		div=1/dist(a,b);
@@ -100,9 +97,26 @@ function getGoodPath(rd){ ///Good = no circle interfere (mesh.js only connects d
 		ret.push( tmp );
 	}
 	ret.push(vertices[ind+1]);
+	if (ret.length<=3)return ret;
+await new Promise(g=>{
+	release.push(g);
+	draw();
+	for (let i=0;i<ret.length-1;++i) {
+		drawSeg(ret[i],ret[i+1],"red");
+	}
+	setTimeout(forwardOnce,200);
+});
 	ret.indic=+Infinity;
 	var MAX_STRT=99;
 	while(ret.indic>0.0001 && MAX_STRT-- > 0) ret=straightenPath(ret);
+await new Promise(g=>{
+	release.push(g);
+	draw();
+	for (let i=0;i<ret.length-1;++i) {
+		drawSeg(ret[i],ret[i+1],"yellow");
+	}
+	setTimeout(forwardOnce,200);
+});
 	return ret;
 }
 
@@ -121,9 +135,11 @@ async function robot(){
 	};
 	wanderer.stack=[];
 	rounds.push(wanderer);
-	await new Promise(g=>{settle=g;});
+	
+	await new Promise(g=>{settle=g;}); ///wait for all initial shapes to stop interfering (see CollisionLoop)
 	settle='done';
-rounds.forEach(rd=>{if (rd!=wanderer) rd.immobile=true;});
+	rounds.forEach(rd=>{if (rd!=wanderer) rd.immobile=true;});
+	
 	var dest={pos:[wanderer.x,wanderer.y]};
 	wanderer.dest=dest;
 	wanderer.goal=dest.pos;
@@ -144,16 +160,11 @@ rounds.forEach(rd=>{if (rd!=wanderer) rd.immobile=true;});
 		}
 		var pat;
 		if (wanderer.stack.length==0) {
-// draw();
-			pat=getGoodPath(wanderer);
+			pat=await getGoodPath(wanderer);
+// console.log(pat);
 			if (pat!='fail' && pat.length>2) {
 				wanderer.stack.push(dest.pos);
 				dest.pos=pat[1];
-/*for (let i=0;i<pat.length-1;++i) {
-	drawSeg(pat[i],pat[i+1],"red");
-}
-console.log("mofo", pat);
-await new Promise(g=>release.push(g));*/
 			} else pat='fail';
 		}
 		upPath();
@@ -162,7 +173,6 @@ await new Promise(g=>release.push(g));*/
 			var dur=frameDur*1000-(Date.now()-tim);
 			if (dur<1) {console.log(dur); dur=1; }
 			await new Promise(g=>setTimeout(g,dur));
-// draw();
 // await new Promise(g=>release.push(g));
 			tim=Date.now();
 			if (pat=='fail'){
@@ -268,6 +278,7 @@ function drawFillTri(t,col="white"){
 
 function draw() {
 	// ctx.clearRect(0,0,cv.width,cv.height);
+	if (release.length>0) return requestAnimationFrame(draw);
 	ctx.fillStyle="#00000022";ctx.fillRect(0,0,cv.width,cv.height);
 	rounds.forEach((rd,ii) =>{
 		if (!rd.dest) return;
@@ -288,10 +299,10 @@ function draw() {
 		ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; 
 	//	ctx.font = "10px Arial";ctx.fillStyle=col;ctx.fillText("x", rd.dest.pos.x, rd.dest.pos.y);
 		// rd.stack.forEach(dt=>{ drawCircle(dt.x,dt.y,2,col); } );
-		var ret=getGoodPath(rd);
-		for (let i=0;i<ret.length-1;++i) {
-			drawSeg(ret[i],ret[i+1],"red");
-		}
+/*var ret=getGoodPath(rd);
+for (let i=0;i<ret.length-1;++i) {
+	drawSeg(ret[i],ret[i+1],"red");
+}*/
 	});
 	for (let ind in lnk) { ///lnk,get_lnk,vertices are from from mesh.js
 		if (lnk[ind].length==0) continue;
@@ -304,7 +315,7 @@ function draw() {
 	///Palette
 	// for (let i=0;i<6;i++) {ctx.fillStyle= getColorFast(i).toColor();ctx.beginPath(); ctx.rect(0,i*20,25,20);ctx.fill();
 
-	requestAnimationFrame(draw);
+	return requestAnimationFrame(draw);
 }
 
 /*** Start of Program ***/
