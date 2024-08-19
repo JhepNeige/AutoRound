@@ -38,7 +38,6 @@ document.body.addEventListener("keypress", forwardOnce);
 function moveGoal(e){
 	var wanderer=rounds.find(rd=>rd.col=="blue");
 	wanderer.goal.x=e.offsetX; wanderer.goal.y=e.offsetY;
-	wanderer.stack.length=0;
 	resetMesh();
 }
 function teleport(e){
