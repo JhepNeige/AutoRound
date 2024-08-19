@@ -118,9 +118,9 @@ function getPath(start,end,filter,ret_key='p') { //TODO: improve cause when you 
 			a=vertices[a];b=vertices[b];
 			var sz=dist(a,b);
 			if (!filter(i,a,b,sz))links[i]=null;
+// if (links[i] && links[i].length>0) drawSeg(a,b,"magenta");
 		}
 	}
-	var cur={p:vertices[start],g:0};
 	function node(arg) {
 		this.t=arg;
 		this.p=get_middle(... this.t.map(x=>vertices[x]));
@@ -129,6 +129,7 @@ function getPath(start,end,filter,ret_key='p') { //TODO: improve cause when you 
 		this.f=this.g+this.h;
 		this.parent=cur;
 	}
+	var cur={p:vertices[start],g:0};
 	var job=[];
 	for (let i=0;i<vertices.length;++i){
 		let tmp=links[get_lnk_index(start,i)];
@@ -190,7 +191,7 @@ function straightenPath(arg){
 	for (let i =1;i<arg.length-1;++i){
 		var d=[arg[i-1],dif(arg[i+1],arg[i-1])];
 		var p;
-		if (cross_prod(d[1],arg[i].vec)<1e-9)p=0;
+		if (Math.abs(cross_prod(d[1],arg[i].vec))<1e-9)p=0;
 		else p=intersections([arg[i].origin,arg[i].vec],d)[0];
 		p=Math.min(arg[i].rg,Math.abs(p))*Math.sign(p);
 		indic+=Math.abs(p-arg[i].corr);
