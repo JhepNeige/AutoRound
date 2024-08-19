@@ -139,7 +139,6 @@ function getPath(start,end,filter,ret_key='p') { //TODO: improve cause when you 
 		.filter(t=>t[0]==start ||t[1]==start ||t[2]==start)
 		.map(t=>new node(t));*/
 	var done=[];
-// console.log(cur, job);
 	while (job.length >0 ) {
 		var lo=0;
 		for (let i=0;i<job.length;++i) if (job[i].f<job[lo].f) lo=i;
@@ -157,12 +156,9 @@ function getPath(start,end,filter,ret_key='p') { //TODO: improve cause when you 
 		if (cur.t.length==3){
 /*			hood= [get_lnk_index(cur.t[0],cur.t[1]),get_lnk_index(cur.t[1],cur.t[2]),get_lnk_index(cur.t[2],cur.t[0])];
 			hood=hood.map(x=>links[x]).filter(x=>x!=null).flat().filter(x=>x!=cur.t);*/
-// console.log("bop");
-// drawFillTri(cur.t,"#ff000011");
 			hood= [[cur.t[0],cur.t[1]],[cur.t[1],cur.t[2]],[cur.t[2],cur.t[0]]];
 			hood=hood.filter(x=>{ let y=links[get_lnk_index(...x)]; return y && y.length>0;})
 		}else{
-// drawSeg(...cur.t,"#ff000011");
 			hood=  links[get_lnk_index(...cur.t)];
 		}
 		if (!hood || hood.length== 0) continue;//there could be better failure
