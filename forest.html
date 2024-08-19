@@ -35,7 +35,7 @@ function forwardOnce() {
 	while(release.length>0) release.pop()();
 	
 }
-// document.body.addEventListener("keypress", forwardOnce);
+document.body.addEventListener("keypress", forwardOnce);
 function moveGoal(e){
 	var wanderer=rounds.find(rd=>rd.col=="blue");
 	wanderer.goal.x=e.offsetX; wanderer.goal.y=e.offsetY;
@@ -76,15 +76,17 @@ function getGoodPath(rd){ ///Good = no circle interfere (mesh.js only connects d
 	var pat=getPath(
 		 ind
 		,ind+1 ///because rounds and goals are inserted one directly after the other
-		,(i,a,b,sz)=>sz-(a.r==null?0:a.r)-(b.r==null?0:b.r)>2*rd.r
+		,(i,a,b,sz)=>a==rd || b==rd || (sz-(a.r==null?0:a.r)-(b.r==null?0:b.r)>2*rd.r)
 		,'t'
 	);
+// console.log("kek",vertices[ind].x,vertices[ind+1].x,pat);
 	if (pat=='fail') return 'fail';
 	///below: eliminate triangles from path
 	///+ move path vertices to optimized position so circles don't interfere (middle of free space)
-	///+ setup path to go through straightenPath
+	///+ setup path to be processed by straightenPath
 	let ret=[vertices[ind]],n=pat.length-1-(pat.length%2==0);
-	for (let i=1+2*(pat.length>3);i<n;i+=2) {
+	for (let i=1+2*(pat.length>2);i<n;i+=2) { //pat.length can't be <3 .. need love
+// console.log("scan",pat[i]);
 		let [a,b]=[vertices[pat[i][0]], vertices[pat[i][1]]];
 		let k,q,div;
 		div=1/dist(a,b);
@@ -142,10 +144,16 @@ rounds.forEach(rd=>{if (rd!=wanderer) rd.immobile=true;});
 		}
 		var pat;
 		if (wanderer.stack.length==0) {
+// draw();
 			pat=getGoodPath(wanderer);
 			if (pat!='fail' && pat.length>2) {
 				wanderer.stack.push(dest.pos);
 				dest.pos=pat[1];
+/*for (let i=0;i<pat.length-1;++i) {
+	drawSeg(pat[i],pat[i+1],"red");
+}
+console.log("mofo", pat);
+await new Promise(g=>release.push(g));*/
 			} else pat='fail';
 		}
 		upPath();
@@ -154,6 +162,7 @@ rounds.forEach(rd=>{if (rd!=wanderer) rd.immobile=true;});
 			var dur=frameDur*1000-(Date.now()-tim);
 			if (dur<1) {console.log(dur); dur=1; }
 			await new Promise(g=>setTimeout(g,dur));
+// draw();
 // await new Promise(g=>release.push(g));
 			tim=Date.now();
 			if (pat=='fail'){
@@ -246,6 +255,16 @@ function drawSeg(a,b,col="white"){
 	ctx.lineTo(b.x,b.y);
 	ctx.stroke();
 }
+function drawFillTri(t,col="white"){
+	var [a,b,c]=t.map(x=>vertices[x]);
+	ctx.fillStyle=col;
+	ctx.beginPath();
+	ctx.moveTo(a.x*20,a.y);
+	ctx.lineTo(b.x*20,b.y);
+	ctx.lineTo(c.x*20,c.y);
+	ctx.lineTo(a.x*20,a.y);
+	ctx.fill();
+}
 
 function draw() {
 	// ctx.clearRect(0,0,cv.width,cv.height);
@@ -253,7 +272,7 @@ function draw() {
 	rounds.forEach((rd,ii) =>{
 		if (!rd.dest) return;
 		drawSeg(rd,rd.dest.pos, "#777777");
-		drawSeg(rd,rd.goal    , "#333333");
+		drawSeg(rd,rd.goal    , "#111111");
 	});
 	rounds.forEach((rd,ii) =>{
 		if (rd.col!="blue") {drawCircle(rd.x,rd.y,rd.r,rd.col); return;}
@@ -283,7 +302,8 @@ function draw() {
 // document.getElementById("outDiv").textContent=eyo.map(x=> x.toExponential().substr(0,5)).join(' ');
 
 	///Palette
-	// for (let i=0;i<6;i++) {ctx.fillStyle= getColorFast(i).toColor();ctx.beginPath(); ctx.rect(0,i*20,25,20);ctx.fill();}
+	// for (let i=0;i<6;i++) {ctx.fillStyle= getColorFast(i).toColor();ctx.beginPath(); ctx.rect(0,i*20,25,20);ctx.fill();
+
 	requestAnimationFrame(draw);
 }
 
