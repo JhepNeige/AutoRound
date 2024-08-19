@@ -48,7 +48,7 @@ function teleport(e){
 	}
 	resetMesh();
 }
-var mouseActions=[moveGoal,,teleport];
+var mouseActions=[moveGoal,,/*teleport*/];
 document.getElementById("cv").addEventListener("mousedown", e=>mouseActions[e.button] && mouseActions[e.button](e));
 //document.getElementById("cv").addEventListener("mousemove", e=>e.buttons==1 && moveGoal(e));
 
