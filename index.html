@@ -131,12 +131,12 @@ async function robot(){
 	// dest.col="red";
 	var tim=Date.now();
 	while(1){
+		var pat;
 		if (wanderer.stack.length>0) {
 			dest.pos=wanderer.stack.pop();
 		}
-		var pat;
+		pat=getGoodPath(wanderer);
 		if (wanderer.stack.length==0) {
-			pat=getGoodPath(wanderer);
 			if (pat!='fail' && pat.length>2) {
 				wanderer.stack.push(dest.pos);
 				dest.pos=pat[1];
@@ -177,6 +177,7 @@ async function robot(){
 					wanderer.stack.push(dest.pos);
 					dest.pos=proj[1];
 					upPath();
+					if (norm(wanderer.vec)<1e-9) { console.warn("too much speed? need more calc frames?"); dest.pos=wanderer.stack.pop();upPath();}
 				}
 			}///end if pat fail
 			wanderer.x+=wanderer.vec.x;
