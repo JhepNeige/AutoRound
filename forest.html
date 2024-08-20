@@ -108,6 +108,7 @@ function getGoodPath(rd){ ///Good = no circle interfere (mesh.js only connects d
 //TODO: stuff hardcoded right and left
 var settle=function(){};
 const frameDur=0.010; ///second
+/// small displacements of size around 1/frameDur will be impossible which can be a problem
 async function robot(){
 
 	var wanderer={
@@ -139,13 +140,12 @@ async function robot(){
 	// dest.col="red";
 	var tim=Date.now();
 	while(1){
+		var pat;
 		if (wanderer.stack.length>0) {
 			dest.pos=wanderer.stack.pop();
 		}
-		var pat;
-		if (wanderer.stack.length==0) {
-			pat=await getGoodPath(wanderer);
-// console.log(pat);
+		pat=await getGoodPath(wanderer);
+		if (wanderer.stack.length==0) { /// means dest.pos==wanderer.goal
 			if (pat!='fail' && pat.length>2) {
 				wanderer.stack.push(dest.pos);
 				dest.pos=pat[1];
@@ -186,6 +186,7 @@ async function robot(){
 					wanderer.stack.push(dest.pos);
 					dest.pos=proj[1];
 					upPath();
+					if (norm(wanderer.vec)<1e-9) { console.warn("too much speed? need more calc frames?"); dest.pos=wanderer.stack.pop();upPath();}
 				}
 			}///end if pat fail
 			wanderer.x+=wanderer.vec.x;
@@ -264,23 +265,24 @@ function draw() {
 	// ctx.clearRect(0,0,cv.width,cv.height);
 	if (release.length>0) return requestAnimationFrame(draw);
 	ctx.fillStyle="#00000022";ctx.fillRect(0,0,cv.width,cv.height);
-	rounds.forEach((rd,ii) =>{
+/*	rounds.forEach((rd,ii) =>{
 		if (!rd.dest) return;
 		drawSeg(rd,rd.dest.pos, "#777777");
 		drawSeg(rd,rd.goal    , "#111111");
-	});
+	});*/
 	rounds.forEach((rd,ii) =>{
 		if (rd.col!="blue") {drawCircle(rd.x,rd.y,rd.r,rd.col); return;}
 		//bunch a hardcode, look away
 		function getcol(arg){
-			if (arg<1) return getColorFast(0,1-arg);
+		//	if (arg<1) return getColorFast(0,1-arg); /// as `arg` goes form 0.0 to 1.0, color goes from white to red
+			if (arg<1) return getColorFast(4);
 			arg-=1;
 			arg=Math.min(arg,5);
 			return getColorFast(arg);
 		}
+		//var col=getcol(rd.stack.length).toColor();
 		drawCircle(rd.x,rd.y,rd.r,rd.col);
-		// var col=getcol(rd.stack.length).toColor();
-		ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; 
+		// ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; 
 	//	ctx.font = "10px Arial";ctx.fillStyle=col;ctx.fillText("x", rd.dest.pos.x, rd.dest.pos.y);
 		// rd.stack.forEach(dt=>{ drawCircle(dt.x,dt.y,2,col); } );
 var ret=getGoodPath(rd);
@@ -319,7 +321,7 @@ for (let i=0;i<MAX_TREES;++i) {
 
 robot();
 
-const NB_FLIPS=1000;
+const NB_FLIPS=1000; //hardcoded
 recurse(async function MeshLinkFlipLoop(){
 	var tim=Date.now();
 	if (flipPool.length==0) initFlips();
