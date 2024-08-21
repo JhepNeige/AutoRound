@@ -34,11 +34,15 @@ function initMesh(w,h,off=0) {
 	triIntoLinks(tri[0]);
 	triIntoLinks(tri[1]);
 }
-function insert(p) {
+function get_house(p){
 	function inside(t,arg) {
 		return polygon_collision.isPointInside(t.map(x=>vertices[x]), [arg.x,arg.y]); // could use a triangle specific algo for perf ?
 	}
 	var t=tri.find(x=>inside(x,p)); // TODO: this is O(n), use binary partition or walk() for O(ln(n))
+	return t;
+}
+function insert(p) {
+	var t=get_house(p);
 	if (!t) {console.warn("bad insertion",[p.x,p.y]); return 'fail';}
 	var p_i=vertices.length;
 	vertices.push(p);
@@ -112,28 +116,37 @@ function get_middle(...args){
 }
 function getPath(start,end,filter,ret_key='p') { //TODO: improve cause when you go on a link from a triangle you got only 1 way to go
 	var links=lnk.slice();
+	// var hideout=get_house(start);
+	var hideout=vertices.indexOf(start);
+	var target=get_house(end);
+	if (hideout==-1 || !target) {console.warn("getPath input error"); return 'fail';}
 	if (filter){
 		for (let i in links){
 			var [a,b]=get_lnk(i);
 			a=vertices[a];b=vertices[b];
 			var sz=dist(a,b);
 			if (!filter(i,a,b,sz))links[i]=null;
-if (links[i] && links[i].length>0) drawSeg(a,b,"magenta");
+// if (links[i] && links[i].length>0) drawSeg(a,b,"magenta");
 		}
 	}
 	function node(arg) {
 		this.t=arg;
 		this.p=get_middle(... this.t.map(x=>vertices[x]));
 		this.g=cur.g+dist(cur.p,this.p);
-		this.h=dist(vertices[end],this.p);
+		this.h=dist(end,this.p);
 		this.f=this.g+this.h;
 		this.parent=cur;
 	}
-	var cur={p:vertices[start],g:0};
+	var cur={p:start,g:0};
+	// var job=[new node(hideout)];
 	var job=[];
-	for (let i=0;i<vertices.length;++i){
+/*	for (let i=0;i<vertices.length;++i){
 		let tmp=links[get_lnk_index(start,i)];
 		if(tmp && tmp.length>0)job.push(new node([start,i]));
+	}*/
+	for (let i=0;i<vertices.length;++i){
+		let tmp=links[get_lnk_index(hideout,i)];
+		if(tmp && tmp.length>0)job.push(new node([hideout,i]));
 	}
 	/*var job=tri
 		.filter(t=>t[0]==start ||t[1]==start ||t[2]==start)
@@ -143,9 +156,10 @@ if (links[i] && links[i].length>0) drawSeg(a,b,"magenta");
 		var lo=0;
 		for (let i=0;i<job.length;++i) if (job[i].f<job[lo].f) lo=i;
 		cur=job[lo];
-		if (cur.t.indexOf(end)>-1) {
+//		if (cur.t.indexOf(end)>-1) {
+		if (cur.t == target) {
 			var tmp=cur;
-			var ret=[vertices[end],cur[ret_key]];
+			var ret=[end,cur[ret_key]];
 			while (tmp = tmp.parent) ret.push(tmp[ret_key]);
 			ret =ret.reverse();
 			return ret;
@@ -175,7 +189,7 @@ if (links[i] && links[i].length>0) drawSeg(a,b,"magenta");
 			}
 		}
 	}
-	return "fail";
+	return 'fail';
 }
 
 
