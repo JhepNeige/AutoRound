@@ -68,7 +68,7 @@ function resetMesh(){
 	});
 }
 
-const clearance=1; //hardcoded
+var clearance=0.1; //hardcoded
 function getGoodPath(rd){ ///Good = no circle interfere (mesh.js only connects dots)
 	var ind=vertices.indexOf(rd);
 	if (ind==-1) return 'fail'; ///subsequent to insertion failure
@@ -140,11 +140,13 @@ async function robot(){
 	// dest.col="red";
 	var tim=Date.now();
 	while(1){
+draw();
 		var pat;
 		if (wanderer.stack.length>0) {
 			dest.pos=wanderer.stack.pop();
 		}
 		pat=await getGoodPath(wanderer);
+console.log("pause");await new Promise(g=>release.push(g));
 		if (wanderer.stack.length==0) { /// means dest.pos==wanderer.goal
 			if (pat!='fail' && pat.length>2) {
 				wanderer.stack.push(dest.pos);
@@ -157,7 +159,6 @@ async function robot(){
 			var dur=frameDur*1000-(Date.now()-tim);
 			if (dur<1) {console.log(dur); dur=1; }
 			await new Promise(g=>setTimeout(g,dur));
-// await new Promise(g=>release.push(g));
 			tim=Date.now();
 			if (pat=='fail'){
 				var proj=[+Infinity,null];
@@ -262,9 +263,9 @@ function drawFillTri(t,col="white"){
 }
 
 function draw() {
-	// ctx.clearRect(0,0,cv.width,cv.height);
-	if (release.length>0) return requestAnimationFrame(draw);
-	ctx.fillStyle="#00000022";ctx.fillRect(0,0,cv.width,cv.height);
+	ctx.clearRect(0,0,cv.width,cv.height);
+	// if (release.length>0) return requestAnimationFrame(draw);
+	// ctx.fillStyle="#00000022";ctx.fillRect(0,0,cv.width,cv.height);
 /*	rounds.forEach((rd,ii) =>{
 		if (!rd.dest) return;
 		drawSeg(rd,rd.dest.pos, "#777777");
@@ -280,15 +281,15 @@ function draw() {
 			arg=Math.min(arg,5);
 			return getColorFast(arg);
 		}
-		//var col=getcol(rd.stack.length).toColor();
-		drawCircle(rd.x,rd.y,rd.r,rd.col);
+		var col=getcol(rd.stack.length).toColor();
+		drawCircle(rd.x,rd.y,rd.r,/*rd.*/col);
 		// ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; 
 	//	ctx.font = "10px Arial";ctx.fillStyle=col;ctx.fillText("x", rd.dest.pos.x, rd.dest.pos.y);
-		// rd.stack.forEach(dt=>{ drawCircle(dt.x,dt.y,2,col); } );
-var ret=getGoodPath(rd);
+		rd.stack.forEach(dt=>{ drawCircle(dt.x,dt.y,2,col); } );
+/*var ret=getGoodPath(rd);
 for (let i=0;i<ret.length-1;++i) {
 	drawSeg(ret[i],ret[i+1],"red");
-}
+}*/
 	});
 	for (let ind in lnk) { ///lnk,get_lnk,vertices are from from mesh.js
 		if (lnk[ind].length==0) continue;
@@ -301,7 +302,7 @@ for (let i=0;i<ret.length-1;++i) {
 	///Palette
 	// for (let i=0;i<6;i++) {ctx.fillStyle= getColorFast(i).toColor();ctx.beginPath(); ctx.rect(0,i*20,25,20);ctx.fill();
 
-	return requestAnimationFrame(draw);
+	// return requestAnimationFrame(draw);
 }
 
 /*** Start of Program ***/

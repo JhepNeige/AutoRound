@@ -118,7 +118,7 @@ function getPath(start,end,filter,ret_key='p') { //TODO: improve cause when you 
 			a=vertices[a];b=vertices[b];
 			var sz=dist(a,b);
 			if (!filter(i,a,b,sz))links[i]=null;
-// if (links[i] && links[i].length>0) drawSeg(a,b,"magenta");
+if (links[i] && links[i].length>0) drawSeg(a,b,"magenta");
 		}
 	}
 	function node(arg) {
