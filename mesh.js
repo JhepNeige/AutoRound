@@ -9,14 +9,20 @@ function get_lnk_index(i,j){if(i==j)return null; if (i<j){let tmp=j;j=i;i=tmp;};
 function get_lnk(ind){ let i=Math.floor(Math.sqrt(ind*8+1)/2+1/2); return [i, ind-i*(i-1)/2];}
 function putAt(arr,i,arg){if (!arr[i])arr[i]=[arg]; else arr[i].push(arg); }
 function triIntoLinks(t){
-	putAt(lnk, get_lnk_index(t[0],t[1]), t); // sparse array = memory leak?
-	putAt(lnk, get_lnk_index(t[1],t[2]), t);
-	putAt(lnk, get_lnk_index(t[2],t[0]), t);
+	[
+		 get_lnk_index(t[0],t[1])
+		,get_lnk_index(t[1],t[2])
+		,get_lnk_index(t[2],t[0])
+	].forEach(x=>{
+		putAt(lnk, x, t); // sparse array = memory leak?
+		if (lnk[x].length>2) throw new Error("triIntoLinks bad mesh");
+	});
 }
+	
 function removeFromLinks(t){
 	lnk[get_lnk_index(t[0],t[1])].remove(t);
 	lnk[get_lnk_index(t[1],t[2])].remove(t);
-	lnk[get_lnk_index(t[2],t[0])].remove(t);
+	lnk[get_lnk_index(t[2],t[0])].remove(t); //need to return a checking function?
 }
 
 /* Mesh Globals */
@@ -34,11 +40,15 @@ function initMesh(w,h,off=0) {
 	triIntoLinks(tri[0]);
 	triIntoLinks(tri[1]);
 }
-function insert(p) {
+function get_house(p){
 	function inside(t,arg) {
 		return polygon_collision.isPointInside(t.map(x=>vertices[x]), [arg.x,arg.y]); // could use a triangle specific algo for perf ?
 	}
 	var t=tri.find(x=>inside(x,p)); // TODO: this is O(n), use binary partition or walk() for O(ln(n))
+	return t;
+}
+function insert(p) {
+	var t=get_house(p);
 	if (!t) {console.warn("bad insertion",[p.x,p.y]); return 'fail';}
 	var p_i=vertices.length;
 	vertices.push(p);
@@ -52,6 +62,24 @@ function insert(p) {
 // if (lnk.find(x=>x && (x.length>2 || (x.length==2 && x.flat().distinct().length<4) ) )){console.log("CLUSTER MEGA FUCK");}
 	return p_i;
 }
+async function kick(ind){
+// draw();
+	var tz=tri.filter(t=>t.indexOf(ind)>-1);
+	var lk=tz.map(x=>x.filter(i=>i!=ind)); /// smallest length is 3
+	var piv=lk[0][0]; //can taking multiple pivots improve perf?
+	lk=lk.filter(x=>x.indexOf(piv)==-1);
+	var ntz=lk.map(x=>x.concat(piv));
+	tz.forEach(t=>{ tri.remove(t); removeFromLinks(t); } );
+	ntz.forEach(t=>{ tri.push(t); triIntoLinks(t); });
+	delete vertices[ind];
+	for (let p of lk.flat().distinct()) lk.push([piv,p]);
+// lk.forEach(x=>{ drawSeg(vertices[x[0]],vertices[x[1]],"yellow"); });
+// console.log(lk);
+	lk=lk.map(x=>get_lnk_index(...x));
+	while (lk.length>0) doOneFlip(lk);
+}
+
+
 
 /* old
 function get_tri_circum_center(a,b,c){ //TODO: avoid fail when segment is horizontal
@@ -72,7 +100,7 @@ function get_tri_circum_center(a,b,c){ ///https://en.wikipedia.org/wiki/Circumci
 
 function initFlips(){
 	if (flipPool.length>0) throw "wtf";
-	for (let ind in lnk) flipPool.push(ind);
+	for (let ind in lnk) {if (lnk[ind].length>0) flipPool.push(ind); }
 }
 function doOneFlip(job=flipPool){
 	if (job.length==0) return;
@@ -82,12 +110,6 @@ function doOneFlip(job=flipPool){
 	var [i,j]=get_lnk(ind);
 	var quad_i=[... a,...b].distinct();
 	var quad=quad_i.map(x=>vertices[x]);
-/*if (quad.length<4) {
-	console.log("there you go", JSON.stringify(vertices.slice(3).map(x=>[x.x,x.y]) ));
-	console.log(lnk[ind]);
-	drawSeg(vertices[i],vertices[j]);
-	drawFillTri(lnk[ind][0],"red");
-}*/
 	var center=get_tri_circum_center(...quad.slice(0,3));
 	var need=dist(center,quad[3]) < dist(center, quad[0]); 
 	/// if (! polygon_collision.isInCircle(...quad) ) continue;/// old: for matrix to work need good triangle points order
@@ -112,8 +134,13 @@ function get_middle(...args){
 }
 function getPath(start,end,filter,ret_key='p') { //TODO: improve cause when you go on a link from a triangle you got only 1 way to go
 	var links=lnk.slice();
+	// var hideout=get_house(start);
+	var hideout=vertices.indexOf(start);
+	var target=get_house(end);
+	if (hideout==-1 || !target) {console.warn("getPath input error"); return 'fail';}
 	if (filter){
 		for (let i in links){
+			if (links[i].length==0)continue;
 			var [a,b]=get_lnk(i);
 			a=vertices[a];b=vertices[b];
 			var sz=dist(a,b);
@@ -125,15 +152,17 @@ function getPath(start,end,filter,ret_key='p') { //TODO: improve cause when you 
 		this.t=arg;
 		this.p=get_middle(... this.t.map(x=>vertices[x]));
 		this.g=cur.g+dist(cur.p,this.p);
-		this.h=dist(vertices[end],this.p);
+		this.h=dist(end,this.p);
 		this.f=this.g+this.h;
 		this.parent=cur;
 	}
-	var cur={p:vertices[start],g:0};
+	var cur={p:start,g:0};
+	// var job=[new node(hideout)];
 	var job=[];
 	for (let i=0;i<vertices.length;++i){
-		let tmp=links[get_lnk_index(start,i)];
-		if(tmp && tmp.length>0)job.push(new node([start,i]));
+		if (!vertices[i])continue;
+		let tmp=links[get_lnk_index(hideout,i)];
+		if(tmp && tmp.length>0)job.push(new node([hideout,i]));
 	}
 	/*var job=tri
 		.filter(t=>t[0]==start ||t[1]==start ||t[2]==start)
@@ -143,9 +172,10 @@ function getPath(start,end,filter,ret_key='p') { //TODO: improve cause when you 
 		var lo=0;
 		for (let i=0;i<job.length;++i) if (job[i].f<job[lo].f) lo=i;
 		cur=job[lo];
-		if (cur.t.indexOf(end)>-1) {
+//		if (cur.t.indexOf(end)>-1) {
+		if (cur.t == target) {
 			var tmp=cur;
-			var ret=[vertices[end],cur[ret_key]];
+			var ret=[end,cur[ret_key]];
 			while (tmp = tmp.parent) ret.push(tmp[ret_key]);
 			ret =ret.reverse();
 			return ret;
@@ -175,7 +205,7 @@ function getPath(start,end,filter,ret_key='p') { //TODO: improve cause when you 
 			}
 		}
 	}
-	return "fail";
+	return 'fail';
 }
 
 
