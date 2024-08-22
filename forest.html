@@ -36,12 +36,11 @@ function forwardOnce() {
 }
 document.body.addEventListener("keypress", forwardOnce);
 function moveGoal(e){
-	var wanderer=rounds.find(rd=>rd.col=="blue");
+	var wanderer=rounds.find(rd=>rd.goal!=null);
 	wanderer.goal.x=e.offsetX; wanderer.goal.y=e.offsetY;
-	// resetMesh();
 }
 function teleport(e){
-	var wanderer=rounds.find(rd=>rd.col=="blue");
+	var wanderer=rounds.find(rd=>rd.goal);
 	wanderer.x=e.offsetX; wanderer.y=e.offsetY;
 	if (norm(wanderer.vec)<1e-9){
 		wanderer.goal.x=e.offsetX; wanderer.goal.y=e.offsetY;
@@ -50,7 +49,7 @@ function teleport(e){
 }
 var mouseActions=[moveGoal,,/*teleport*/];
 document.getElementById("cv").addEventListener("mousedown", e=>mouseActions[e.button] && mouseActions[e.button](e));
-//document.getElementById("cv").addEventListener("mousemove", e=>e.buttons==1 && moveGoal(e));
+document.getElementById("cv").addEventListener("mousemove", e=>e.buttons==1 && moveGoal(e));
 
 
 /// Resources
@@ -70,8 +69,8 @@ function resetMesh(){
 
 var clearance=0.1; //hardcoded
 function getGoodPath(rd){ ///Good = no circle interfere (mesh.js only connects dots)
-	// var ind=vertices.indexOf(rd);
-	// if (ind==-1) return 'fail'; ///subsequent to insertion failure
+	// kick(vertices.indexOf(rd));
+	// insert(rd);
 	var pat=getPath(
 		 rd
 		,rd.goal
@@ -107,16 +106,16 @@ function getGoodPath(rd){ ///Good = no circle interfere (mesh.js only connects d
 
 //TODO: stuff hardcoded right and left
 var settle=function(){};
-const frameDur=0.010; ///second
+const frameDur=0.008; ///second
 /// small displacements of size around 1/frameDur will be impossible which can be a problem
 async function robot(){
 
 	var wanderer={
-		r:15+10*ran()
+		r:10+5*ran()
 		,x: w*ran()
 		,y: h*ran()
 		,vec:[0,0]
-		,col:"blue"
+		,col:"yellow"
 	};
 	wanderer.stack=[];
 	var dest={pos:[wanderer.x,wanderer.y]};
@@ -133,7 +132,9 @@ async function robot(){
 	settle='done';
 	rounds.forEach(rd=>{if (rd!=wanderer) rd.immobile=true;});
 
-	var speed= 150*(1+0.25*ran()); /// speed in pixel per second
+	wanderer.goal.x=wanderer.x;wanderer.goal.y=wanderer.y;
+
+	var speed= 180;//*(1+0.25*ran()); /// speed in pixel per second
 	function upPath(){
 		wanderer.vec=mult(normed(dif(dest.pos,wanderer)),frameDur*speed);
 		wanderer.step=flo(dist(dest.pos,wanderer)/(frameDur*speed));
@@ -257,16 +258,16 @@ function drawFillTri(t,col="white"){
 	var [a,b,c]=t.map(x=>vertices[x]);
 	ctx.fillStyle=col;
 	ctx.beginPath();
-	ctx.moveTo(a.x*20,a.y);
-	ctx.lineTo(b.x*20,b.y);
-	ctx.lineTo(c.x*20,c.y);
-	ctx.lineTo(a.x*20,a.y);
+	ctx.moveTo(a.x,a.y);
+	ctx.lineTo(b.x,b.y);
+	ctx.lineTo(c.x,c.y);
+	ctx.lineTo(a.x,a.y);
 	ctx.fill();
 }
 
 function draw() {
-	// ctx.clearRect(0,0,cv.width,cv.height);
 	// if (release.length>0) return requestAnimationFrame(draw);
+	// ctx.clearRect(0,0,cv.width,cv.height); console.log("clear");
 	ctx.fillStyle="#00000022";ctx.fillRect(0,0,cv.width,cv.height);
 /*	rounds.forEach((rd,ii) =>{
 		if (!rd.dest) return;
@@ -274,7 +275,7 @@ function draw() {
 		drawSeg(rd,rd.goal    , "#111111");
 	});*/
 	rounds.forEach((rd,ii) =>{
-		if (rd.col!="blue") {drawCircle(rd.x,rd.y,rd.r,rd.col); return;}
+		if (rd.goal) {drawCircle(rd.x,rd.y,rd.r,rd.col); return;}
 		//bunch a hardcode, look away
 		function getcol(arg){
 		//	if (arg<1) return getColorFast(0,1-arg); /// as `arg` goes form 0.0 to 1.0, color goes from white to red
@@ -288,16 +289,16 @@ function draw() {
 		// ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; 
 	//	ctx.font = "10px Arial";ctx.fillStyle=col;ctx.fillText("x", rd.dest.pos.x, rd.dest.pos.y);
 		// rd.stack.forEach(dt=>{ drawCircle(dt.x,dt.y,2,col); } );
-var ret=getGoodPath(rd);
+/*var ret=getGoodPath(rd);
 for (let i=0;i<ret.length-1;++i) {
 	drawSeg(ret[i],ret[i+1],"red");
-}
+}*/
 	});
-	for (let ind in lnk) { ///lnk,get_lnk,vertices are from from mesh.js
+/*	for (let ind in lnk) { ///lnk,get_lnk,vertices are from from mesh.js
 		if (lnk[ind].length==0) continue;
 		let seg=get_lnk(ind);
 		drawSeg(vertices[seg[0]], vertices[seg[1]], "#444444");
-	}
+	}*/
 
 // document.getElementById("outDiv").textContent=eyo.map(x=> x.toExponential().substr(0,5)).join(' ');
 
@@ -315,7 +316,7 @@ initMesh(w,h);
 
 const MAX_TREES=30;
 for (let i=0;i<MAX_TREES;++i) {
-	const hi=30,lo=10;
+	const hi=25,lo=20;
 	var r=(hi-lo)*ran()+lo
 	var obj={r:r, x:(w-r*2)*ran()+r, y:(h-r*2)*ran()+r, vec:[0,0],immobile:false,col:"white"};
 	insert(obj);
@@ -328,15 +329,14 @@ const NB_FLIPS=1000; //hardcoded
 recurse(async function MeshLinkFlipLoop(){
 	var tim=Date.now();
 	if (flipPool.length==0) initFlips();
-	var rst=false;
 	for (let i =0; i< NB_FLIPS;++i){
-		doOneFlip();
-		if (lnk.find(x=>x && x.length>2)){rst=true; break;} // TODO: prevention instead of cure
+		try {
+			doOneFlip();
+		} catch (e) {
+			console.warn("fucked up link");
+			resetMesh();
+		}
 		if (flipPool.length==0)break;
-	}
-	if (rst) {
-		console.warn("fucked up link");
-		resetMesh();
 	}
 	var dur=10-(Date.now()-tim); // hardcoded 10ms max duration flip loop
 	if (dur<1) console.log("bad flip loop");
