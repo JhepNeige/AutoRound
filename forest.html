@@ -35,17 +35,12 @@ function forwardOnce() {
 	while(release.length>0) release.pop()();
 }
 document.body.addEventListener("keypress", forwardOnce);
+
+var interrupt=false;
 function moveGoal(e){
 	var wanderer=rounds.find(rd=>rd.goal!=null);
 	wanderer.goal.x=e.offsetX; wanderer.goal.y=e.offsetY;
-}
-function teleport(e){
-	var wanderer=rounds.find(rd=>rd.goal);
-	wanderer.x=e.offsetX; wanderer.y=e.offsetY;
-	if (norm(wanderer.vec)<1e-9){
-		wanderer.goal.x=e.offsetX; wanderer.goal.y=e.offsetY;
-	}
-	resetMesh();
+	wanderer.interrupt=true;
 }
 var mouseActions=[moveGoal,,/*teleport*/];
 document.getElementById("cv").addEventListener("mousedown", e=>mouseActions[e.button] && mouseActions[e.button](e));
@@ -157,7 +152,8 @@ async function robot(){
 			} else pat='fail';
 		}
 		upPath();
-		while (wanderer.step > 0) {
+		wanderer.interrupt=false;
+		while (wanderer.step > 0 && !wanderer.interrupt) {
 			wanderer.step--;
 			var dur=frameDur*1000-(Date.now()-tim);
 			if (dur<1) {console.log(dur); dur=1; }
