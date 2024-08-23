@@ -45,6 +45,16 @@ function moveGoal(e){
 var mouseActions=[moveGoal,,/*teleport*/];
 document.getElementById("cv").addEventListener("mousedown", e=>mouseActions[e.button] && mouseActions[e.button](e));
 document.getElementById("cv").addEventListener("mousemove", e=>e.buttons==1 && moveGoal(e));
+var sel;
+document.getElementById("cv").addEventListener("mousemove", e=>{
+	var lo=0;
+	rounds.forEach((x,i)=>{ if (dist([e.offsetX,e.offsetY],rounds[lo])>dist([e.offsetX,e.offsetY],x)) lo=i;});
+	if (rounds[lo].col=="yellow") return;
+	sel=rounds[lo];
+	rounds.forEach(x=>{if (!x.goal) x.col="white"; });
+	rounds[lo].col="red";
+});
+document.body.addEventListener("keyup", e=>{if (e.key=" ") console.log(vertices.indexOf(sel)); });
 
 
 /// Resources
@@ -65,13 +75,13 @@ function resetMesh(){
 var clearance=0.1; //hardcoded
 function getGoodPath(rd){ ///Good = no circle interfere (mesh.js only connects dots)
 	// kick(vertices.indexOf(rd));
-	// insert(rd);
 	var pat=getPath(
 		 rd
 		,rd.goal
 		,(i,a,b,sz)=>a==rd || b==rd || (sz-(a.r==null?0:a.r)-(b.r==null?0:b.r)>2*rd.r)
 		,'t'
 	);
+	// insert(rd);
 	if (pat=='fail') return 'fail';
 	///below: eliminate triangles from path
 	///+ move path vertices to optimized position so circles don't interfere (middle of free space)
@@ -290,11 +300,11 @@ for (let i=0;i<ret.length-1;++i) {
 	drawSeg(ret[i],ret[i+1],"red");
 }*/
 	});
-/*	for (let ind in lnk) { ///lnk,get_lnk,vertices are from from mesh.js
-		if (lnk[ind].length==0) continue;
+	for (let ind in lnk) { ///lnk,get_lnk,vertices are from from mesh.js
+		if (lnk[ind] && lnk[ind].length==0) continue;
 		let seg=get_lnk(ind);
 		drawSeg(vertices[seg[0]], vertices[seg[1]], "#444444");
-	}*/
+	}
 
 // document.getElementById("outDiv").textContent=eyo.map(x=> x.toExponential().substr(0,5)).join(' ');
 
