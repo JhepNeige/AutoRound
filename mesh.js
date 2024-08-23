@@ -34,11 +34,12 @@ var flipPool=[];
 
 /* Delaunay functions */
 function initMesh(w,h,off=0) {
-	vertices=[[0-off,0-off],[w+off,0-off], [w+off,h+off], [0-off,h+off] ];
-	tri=[[0,1,2],[2,3,0]];
+	// vertices=[[0-off,0-off],[w+off,0-off], [w+off,h+off], [0-off,h+off] ];
+	// tri=[[0,1,2],[2,3,0]];
+	vertices=[[0-off,0-off],[w+off,0-off],[w+off,h+off],[0-off,h+off],[w/2,0-off],[w+off,h/2],[w/2,h+off],[0-off,h/2] ];
+	tri=[[4,5,1],[5,6,2],[6,7,3],[7,4,0],[4,5,6],[6,7,4]];
 	lnk=[];
-	triIntoLinks(tri[0]);
-	triIntoLinks(tri[1]);
+	tri.forEach(t=>triIntoLinks(t));
 }
 function get_house(p){
 	function inside(t,arg) {
