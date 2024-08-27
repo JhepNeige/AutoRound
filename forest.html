@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:;base64,=">
 <title>
 The Forest
 </title>
@@ -45,6 +46,16 @@ function moveGoal(e){
 var mouseActions=[moveGoal,,/*teleport*/];
 document.getElementById("cv").addEventListener("mousedown", e=>mouseActions[e.button] && mouseActions[e.button](e));
 document.getElementById("cv").addEventListener("mousemove", e=>e.buttons==1 && moveGoal(e));
+var sel;
+document.getElementById("cv").addEventListener("mousemove", e=>{
+	var lo=0;
+	rounds.forEach((x,i)=>{ if (dist([e.offsetX,e.offsetY],rounds[lo])>dist([e.offsetX,e.offsetY],x)) lo=i;});
+	if (rounds[lo].col=="yellow") return;
+	sel=rounds[lo];
+	rounds.forEach(x=>{if (!x.goal) x.col="white"; });
+	rounds[lo].col="red";
+});
+document.body.addEventListener("keyup", e=>{if (e.key=" ") console.log(vertices.indexOf(sel)); });
 
 
 /// Resources
@@ -65,13 +76,13 @@ function resetMesh(){
 var clearance=0.1; //hardcoded
 function getGoodPath(rd){ ///Good = no circle interfere (mesh.js only connects dots)
 	// kick(vertices.indexOf(rd));
-	// insert(rd);
 	var pat=getPath(
 		 rd
 		,rd.goal
 		,(i,a,b,sz)=>a==rd || b==rd || (sz-(a.r==null?0:a.r)-(b.r==null?0:b.r)>2*rd.r)
 		,'t'
 	);
+	// insert(rd);
 	if (pat=='fail') return 'fail';
 	///below: eliminate triangles from path
 	///+ move path vertices to optimized position so circles don't interfere (middle of free space)
@@ -290,11 +301,11 @@ for (let i=0;i<ret.length-1;++i) {
 	drawSeg(ret[i],ret[i+1],"red");
 }*/
 	});
-/*	for (let ind in lnk) { ///lnk,get_lnk,vertices are from from mesh.js
-		if (lnk[ind].length==0) continue;
+	for (let ind in lnk) { ///lnk,get_lnk,vertices are from from mesh.js
+		if (lnk[ind] && lnk[ind].length==0) continue;
 		let seg=get_lnk(ind);
 		drawSeg(vertices[seg[0]], vertices[seg[1]], "#444444");
-	}*/
+	}
 
 // document.getElementById("outDiv").textContent=eyo.map(x=> x.toExponential().substr(0,5)).join(' ');
 
@@ -318,6 +329,9 @@ for (let i=0;i<MAX_TREES;++i) {
 	insert(obj);
 	rounds.push(obj);
 }
+
+// rounds=[{"r":23.771945356988084,"x":489.5946870907777,"y":228.17167512273062,"vec":[0,0],"immobile":true,"col":"white"},{"r":21.63445709233006,"x":82.21292653429897,"y":99.46530691421188,"vec":[0,0],"immobile":true,"col":"white"},{"r":20.965763332804332,"x":568.5446602517713,"y":331.3443124939684,"vec":[0,0],"immobile":true,"col":"white"},{"r":23.267152274518278,"x":80.271640775765,"y":223.31567288767476,"vec":[0,0],"immobile":true,"col":"white"},{"r":23.111896491376566,"x":281.42037434751256,"y":326.50266709849836,"vec":[0,0],"immobile":true,"col":"white"},{"r":21.491170862297537,"x":307.37658915209954,"y":120.42859323745262,"vec":[0,0],"immobile":true,"col":"white"},{"r":22.057483115639958,"x":485.79055624157263,"y":141.8120263461028,"vec":[0,0],"immobile":true,"col":"white"},{"r":24.609041248328744,"x":563.8052615513876,"y":422.26502649181924,"vec":[0,0],"immobile":true,"col":"white"},{"r":21.15096096707756,"x":325.69463302486645,"y":325.0257677933879,"vec":[0,0],"immobile":true,"col":"white"},{"r":22.502228426666854,"x":516.056238313663,"y":39.5089989433074,"vec":[0,0],"immobile":true,"col":"white"},{"r":22.165128302036383,"x":93.42064554861592,"y":141.91010202849404,"vec":[0,0],"immobile":true,"col":"white"},{"r":24.622472260131367,"x":508.7672517057326,"y":432.45562817393403,"vec":[0,0],"immobile":true,"col":"white"},{"r":21.45035234847739,"x":445.32846394485813,"y":310.4769786822593,"vec":[0,0],"immobile":true,"col":"white"},{"r":23.312225810901708,"x":529.1756536287428,"y":389.04621346139083,"vec":[0,0],"immobile":true,"col":"white"},{"r":21.63327956084889,"x":521.5579272417622,"y":116.54691072152332,"vec":[0,0],"immobile":true,"col":"white"},{"r":22.06839424475247,"x":204.11606882002104,"y":119.72510858087763,"vec":[0,0],"immobile":true,"col":"white"},{"r":21.93897367796435,"x":473.50281310017294,"y":343.53550085009874,"vec":[0,0],"immobile":true,"col":"white"},{"r":21.218084304121263,"x":245.97494713539945,"y":299.71377232400084,"vec":[0,0],"immobile":true,"col":"white"},{"r":24.8637355568182,"x":544.8333018109406,"y":263.6799046590229,"vec":[0,0],"immobile":true,"col":"white"},{"r":20.87984106312063,"x":471.71542529244107,"y":44.734466384367764,"vec":[0,0],"immobile":true,"col":"white"},{"r":20.99292096037427,"x":444.15804281047474,"y":249.91687539647538,"vec":[0,0],"immobile":true,"col":"white"},{"r":23.10840614824316,"x":25.175502654438006,"y":434.97085175284946,"vec":[0,0],"immobile":true,"col":"white"},{"r":22.68582962728828,"x":268.758520081734,"y":370.54201889708565,"vec":[0,0],"immobile":true,"col":"white"},{"r":21.746267430037918,"x":355.9091896581343,"y":31.430172855836048,"vec":[0,0],"immobile":true,"col":"white"},{"r":22.698251062401667,"x":159.69465075393953,"y":113.42007264788056,"vec":[0,0],"immobile":true,"col":"white"},{"r":23.551602225912283,"x":302.42326492781854,"y":249.2887041530705,"vec":[0,0],"immobile":true,"col":"white"},{"r":23.652936382000764,"x":145.50768910939303,"y":344.66326807139666,"vec":[0,0],"immobile":true,"col":"white"},{"r":23.613324884721692,"x":79.93591679272595,"y":278.13069817053554,"vec":[0,0],"immobile":true,"col":"white"},{"r":20.892757606416048,"x":129.6493582991244,"y":22.300081586539413,"vec":[0,0],"immobile":true,"col":"white"},{"r":22.975857056336537,"x":518.4956108710874,"y":343.9043158629024,"vec":[0,0],"immobile":true,"col":"white"}];
+// resetMesh();
 
 robot();
 

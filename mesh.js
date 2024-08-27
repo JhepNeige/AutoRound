@@ -34,11 +34,12 @@ var flipPool=[];
 
 /* Delaunay functions */
 function initMesh(w,h,off=0) {
-	vertices=[[0-off,0-off],[w+off,0-off], [w+off,h+off], [0-off,h+off] ];
-	tri=[[0,1,2],[2,3,0]];
+	// vertices=[[0-off,0-off],[w+off,0-off], [w+off,h+off], [0-off,h+off] ];
+	// tri=[[0,1,2],[2,3,0]];
+	vertices=[[0-off,0-off],[w+off,0-off],[w+off,h+off],[0-off,h+off],[w/2,0-off],[w+off,h/2],[w/2,h+off],[0-off,h/2] ];
+	tri=[[4,5,1],[5,6,2],[6,7,3],[7,4,0],[4,5,6],[6,7,4]];
 	lnk=[];
-	triIntoLinks(tri[0]);
-	triIntoLinks(tri[1]);
+	tri.forEach(t=>triIntoLinks(t));
 }
 function get_house(p){
 	function inside(t,arg) {
@@ -66,17 +67,28 @@ async function kick(ind){
 // draw();
 	var tz=tri.filter(t=>t.indexOf(ind)>-1);
 	var lk=tz.map(x=>x.filter(i=>i!=ind)); /// smallest length is 3
-	var piv=lk[0][0]; //can taking multiple pivots improve perf?
+	var piv=lk[0][0];
 	lk=lk.filter(x=>x.indexOf(piv)==-1);
 	var ntz=lk.map(x=>x.concat(piv));
 	tz.forEach(t=>{ tri.remove(t); removeFromLinks(t); } );
 	ntz.forEach(t=>{ tri.push(t); triIntoLinks(t); });
-	delete vertices[ind];
 	for (let p of lk.flat().distinct()) lk.push([piv,p]);
+/*	var last=vertices.length-1;
+	if (ind!=last){
+		vertices[ind]=vertices[last];
+		tri.forEach(t=>{let i=t.indexOf(last); if (i>-1) t[i]=ind; });
+		lk.forEach(x=>{let i=x.indexOf(last); if (i>-1) x[i]=ind; });
+		for (let i=0;i<vertices.length-1;++i){
+			if (i==ind) continue;
+			lnk[get_lnk_index(i,ind)]=lnk[get_lnk_index(i,last)];
+		}
+	}
+	vertices.pop(); lnk.length=(vertices.length-1)*vertices.length/2;
+*/
 // lk.forEach(x=>{ drawSeg(vertices[x[0]],vertices[x[1]],"yellow"); });
-// console.log(lk);
+console.log(lk);
 	lk=lk.map(x=>get_lnk_index(...x));
-	while (lk.length>0) doOneFlip(lk);
+	while (lk.length>0) console.log(doOneFlip(lk));
 }
 
 
@@ -100,7 +112,7 @@ function get_tri_circum_center(a,b,c){ ///https://en.wikipedia.org/wiki/Circumci
 
 function initFlips(){
 	if (flipPool.length>0) throw "wtf";
-	for (let ind in lnk) {if (lnk[ind].length>0) flipPool.push(ind); }
+	for (let ind in lnk) {if (lnk[ind] && lnk[ind].length>0) flipPool.push(ind); }
 }
 function doOneFlip(job=flipPool){
 	if (job.length==0) return;
@@ -108,15 +120,23 @@ function doOneFlip(job=flipPool){
 	if (lnk[ind].length<2) return;
 	var a=lnk[ind][0], b=lnk[ind][1];
 	var [i,j]=get_lnk(ind);
+	var [k,l]=a.concat(b).filter(x=>x!=i && x!=j);
+	var center,need;
+	center=get_tri_circum_center(vertices[i],vertices[j],vertices[k] );
+	need=dist(center,vertices[i]) > dist(center, vertices[l]);
+	center=get_tri_circum_center(vertices[i],vertices[j],vertices[l] );
+	need ||= dist(center,vertices[i]) > dist(center, vertices[k]);
+//if the second check is necessary it means the mesh is fucked beyond repair :(
+
+/*	var a=lnk[ind][0], b=lnk[ind][1];
 	var quad_i=[... a,...b].distinct();
 	var quad=quad_i.map(x=>vertices[x]);
 	var center=get_tri_circum_center(...quad.slice(0,3));
-	var need=dist(center,quad[3]) < dist(center, quad[0]); 
+	var need=dist(center,quad[3]) < dist(center, quad[0]); */
 	/// if (! polygon_collision.isInCircle(...quad) ) continue;/// old: for matrix to work need good triangle points order
-	if (!need ) return;
+	if (!need ) return get_lnk(ind).join(',')+ " is ok";
 	tri.remove(a); removeFromLinks(a);
 	tri.remove(b); removeFromLinks(b);
-	var [k,l]=quad_i.filter(x=>x!=i && x!=j);
 	var newt;
 	newt=[k,l,i]; tri.push(newt); triIntoLinks(newt);
 	newt=[k,l,j]; tri.push(newt); triIntoLinks(newt);
@@ -137,10 +157,11 @@ function getPath(start,end,filter,ret_key='p') { //TODO: improve cause when you 
 	// var hideout=get_house(start);
 	var hideout=vertices.indexOf(start);
 	var target=get_house(end);
+	// if (!hideout || !target) {console.warn("getPath input error"); return 'fail';}
 	if (hideout==-1 || !target) {console.warn("getPath input error"); return 'fail';}
 	if (filter){
 		for (let i in links){
-			if (links[i].length==0)continue;
+			if (links[i] && links[i].length==0)continue;
 			var [a,b]=get_lnk(i);
 			a=vertices[a];b=vertices[b];
 			var sz=dist(a,b);
