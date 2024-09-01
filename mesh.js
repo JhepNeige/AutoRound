@@ -72,6 +72,9 @@ async function kick(ind){
 	var ntz=lk.map(x=>x.concat(piv));
 	tz.forEach(t=>{ tri.remove(t); removeFromLinks(t); } );
 	ntz.forEach(t=>{ tri.push(t); triIntoLinks(t); });
+draw();
+tz.forEach(t=>{drawTriangle(t,"red")});
+await new Promise(g=>release.push(g));
 //	for (let p of lk.flat().distinct()) lk.push([piv,p]);
 	var myPool=ntz.map(t=>[[t[0],t[1]],[t[1],t[2]],[t[2],t[0]]]).flat().distinct();
 /*	var last=vertices.length-1;
@@ -87,9 +90,10 @@ async function kick(ind){
 	vertices.pop(); lnk.length=(vertices.length-1)*vertices.length/2;
 */
 // lk.forEach(x=>{ drawSeg(vertices[x[0]],vertices[x[1]],"yellow"); });
-console.log(myPool);
+// console.log(myPool);
 	myPool=myPool.map(x=>get_lnk_index(...x));
-	while (myPool.length>0) console.log(doOneFlip(myPool));
+//	while (myPool.length>0) console.log(doOneFlip(myPool));
+	while (myPool.length>0) await doOneFlip(myPool,true);
 }
 
 
@@ -115,7 +119,7 @@ function initFlips(){
 	if (flipPool.length>0) throw "wtf";
 	for (let ind in lnk) {if (lnk[ind] && lnk[ind].length>0) flipPool.push(ind); }
 }
-function doOneFlip(job=flipPool){
+async function doOneFlip(job=flipPool,verb=false){
 	if (job.length==0) return;
 	var ind=job.pop();
 	if (lnk[ind].length<2) return;
@@ -136,11 +140,16 @@ function doOneFlip(job=flipPool){
 	var need=dist(center,quad[3]) < dist(center, quad[0]); */
 	/// if (! polygon_collision.isInCircle(...quad) ) continue;/// old: for matrix to work need good triangle points order
 	if (!need ) return get_lnk(ind).join(',')+ " is ok";
-	tri.remove(a); removeFromLinks(a);
-	tri.remove(b); removeFromLinks(b);
-	var newt;
-	newt=[k,l,i]; tri.push(newt); triIntoLinks(newt);
-	newt=[k,l,j]; tri.push(newt); triIntoLinks(newt);
+draw();
+	tri.remove(a); removeFromLinks(a); drawTriangle(a,"red");
+	tri.remove(b); removeFromLinks(b); drawTriangle(b,"red");
+	var newt1,newt2;
+	newt1=[k,l,i]; tri.push(newt1);  drawTriangle(newt1,"blue");
+	newt2=[k,l,j]; tri.push(newt2);  drawTriangle(newt2,"blue");
+if (verb) await new Promise(g=>release.push(g));
+triIntoLinks(newt1);
+triIntoLinks(newt2);
+draw(); console.log("here");
 	job.add(get_lnk_index(i,k),get_lnk_index(k,j),get_lnk_index(j,l),get_lnk_index(l,i));
 }
 
