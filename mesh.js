@@ -72,7 +72,8 @@ async function kick(ind){
 	var ntz=lk.map(x=>x.concat(piv));
 	tz.forEach(t=>{ tri.remove(t); removeFromLinks(t); } );
 	ntz.forEach(t=>{ tri.push(t); triIntoLinks(t); });
-	for (let p of lk.flat().distinct()) lk.push([piv,p]);
+//	for (let p of lk.flat().distinct()) lk.push([piv,p]);
+	var myPool=ntz.map(t=>[[t[0],t[1]],[t[1],t[2]],[t[2],t[0]]]).flat().distinct();
 /*	var last=vertices.length-1;
 	if (ind!=last){
 		vertices[ind]=vertices[last];
@@ -86,9 +87,9 @@ async function kick(ind){
 	vertices.pop(); lnk.length=(vertices.length-1)*vertices.length/2;
 */
 // lk.forEach(x=>{ drawSeg(vertices[x[0]],vertices[x[1]],"yellow"); });
-console.log(lk);
-	lk=lk.map(x=>get_lnk_index(...x));
-	while (lk.length>0) console.log(doOneFlip(lk));
+console.log(myPool);
+	myPool=myPool.map(x=>get_lnk_index(...x));
+	while (myPool.length>0) console.log(doOneFlip(myPool));
 }
 
 
